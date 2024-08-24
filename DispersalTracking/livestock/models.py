@@ -9,7 +9,7 @@ class FarmLocation(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=False, blank=True, default=0.0)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=False, blank=True, default=0.0)
     description = models.TextField(blank=True, null=True)
-    grower = models.ForeignKey('Grower', related_name='farm_locations', null=False, blank=True, on_delete=models.CASCADE, default=1)
+    grower = models.ForeignKey(Grower, related_name='farm_locations', null=False, blank=True, on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return self.name
@@ -24,8 +24,8 @@ class LivestockFamily(models.Model):
     date_recorded = models.DateField()
     brood_generation_number = models.IntegerField(null=True, blank=True, default=1)
 
-    hens = models.ManyToManyField('Chicken', related_name='family_female', blank=True)
-    roosters = models.ManyToManyField('Chicken', related_name='family_male', blank=True)
+    hens = models.ManyToManyField('Livestock', related_name='family_female', blank=True)
+    roosters = models.ManyToManyField('Livestock', related_name='family_male', blank=True)
 
     objects = LivestockFamilyManager()
 
