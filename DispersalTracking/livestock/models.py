@@ -42,21 +42,10 @@ class Livestock(models.Model):
     batch_no = models.IntegerField()
     tag_color = models.CharField(max_length=50)
     date_recorded = models.DateField()
-
     livestock_family = models.ForeignKey('LivestockFamily', on_delete=models.CASCADE, null=True, blank=True)
-
     objects = models.Manager()  # The default manager
     chicken_family_objects = LivestockFamilyManager()  # The custom manager.
 
-    def __str__(self):
-        return self.ls_code
-
-    def clean(self):
-        if self.chicken_family_id and Livestock.objects.exclude(id=self.id).filter(livestock_family_id=self.livestock_family_id).exists():
-            raise ValidationError("This chicken is already assigned to another family.")
-
-    def __str__(self):
-        return self.livestock_code
     
 class Dispersal(models.Model):
     grower = models.ForeignKey(Grower, on_delete=models.CASCADE)
@@ -70,3 +59,17 @@ class Dispersal(models.Model):
     def clean(self):
         if self.dispersal_date > timezone.now().date():
             raise ValidationError("Dispersal date cannot be in the future.")
+
+class Messages(models.Model):
+    name = models.CharField(max_length=100, blank=True, null=True)  
+    email = models.EmailField(max_length=254)  
+    subject = models.CharField(max_length=100, blank=True, null=True) 
+    message = models.TextField() 
+    created_at = models.DateTimeField(auto_now_add=True)  
+
+    class Meta:
+        verbose_name_plural = "Messages"  
+        ordering = ['-created_at'] 
+
+    def __str__(self):
+        return f"Message from {self.name or 'Anonymous'} ({self.email})"

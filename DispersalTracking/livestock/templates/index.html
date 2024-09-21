@@ -21,7 +21,7 @@
                                 <p class="card-text">Keep detailed records of each chicken in your farm.</p>
                             </div>
                             <div class="card-footer">
-                                <a class="btn btn-custom" href="#" role="button">View Zampen Chickens</a>
+                                <a class="btn btn-custom" href="{% url 'livestock' %}" role="button">View Zampen Chickens</a>
                             </div>
                         </div>
                     </div>
@@ -33,7 +33,7 @@
                                 <p class="card-text">Organize chickens into family groups for better breeding management.</p>
                             </div>
                             <div class="card-footer">
-                                <a class="btn btn-custom" href="#" role="button">View Chicken Families</a>
+                                <a class="btn btn-custom" href="{%url  'family' %}" role="button">View Chicken Families</a>
                             </div>
                         </div>
                     </div>
@@ -45,7 +45,7 @@
                                 <p class="card-text">View farm locations in the map.</p>
                             </div>
                             <div class="card-footer">
-                                <a class="btn btn-custom" href="#" role="button">View Farms</a>
+                                <a class="btn btn-custom" href="{%url 'farm'%}" role="button">View Farms</a>
                             </div>
                         </div>
                     </div>
@@ -57,7 +57,7 @@
                                 <p class="card-text">Track where and when chickens are dispersed to different locations.</p>
                             </div>
                             <div class="card-footer">
-                                <a class="btn btn-custom" href="#" role="button">View Dispersals</a>
+                                <a class="btn btn-custom" href="{%url 'dispersal'%}" role="button">View Dispersals</a>
                             </div>
                         </div>
                     </div>
@@ -66,10 +66,6 @@
         </section>
     </main>
 
-    <footer class="footer">
-        <p>&copy; 2024 Zampen Chicken Tracking Management System. All rights reserved.</p>
-        <p><a href="{% url 'contact' %}">Contact Us</a></p>
-    </footer>
 
     <style>
         body {
@@ -103,12 +99,6 @@
             margin-bottom: 15px;
         }
 
-        .footer {
-            background-color: #1d8034;
-            color: #ffffff;
-            padding: 20px 0;
-            text-align: center;
-        }
 
         .card {
             min-width: 200px;

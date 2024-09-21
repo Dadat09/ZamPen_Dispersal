@@ -22,37 +22,51 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                            <a class="nav-link active" aria-current="page" href="{% url 'index' %}">Home</a>
+                            <a class="nav-link {% if request.path == '/' %}active{% endif %}" aria-current="page" href="{% url 'index' %}">Home</a>
                         </li>
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="featuresDropdown" 
+                            <a class="nav-link dropdown-toggle {% if request.path == '/features/' %}active{% endif %}" href="#" id="featuresDropdown" 
                                 role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 Features
                             </a>
-                            <ul class="dropdown-menu" aria-labelledby="featuresDropdown">
-                                <li><a class="dropdown-item" href="">Zampen Chickens</a></li>
+                            <ul class="dropdown-menu active" aria-labelledby="featuresDropdown">
+                                <li><a class="dropdown-item " href="{%url 'livestock'%}">Zampen Chickens</a></li>
                                 <li><a class="dropdown-item" href="">Growers</a></li>
-                                <li><a class="dropdown-item" href="">Farm Locations</a></li>
-                                <li><a class="dropdown-item" href="">Chicken Families</a></li>
+                                <li><a class="dropdown-item" href="">Farm Locations</a></li>    
+                                <li><a class="dropdown-item" href="{%url 'family'%}">Chicken Families</a></li>
                                 <li><a class="dropdown-item" href="">Dispersals</a></li>
                             </ul>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'contact' %}">Contact</a>
+                            <a class="nav-link {% if request.path == '/contact/' %}active{% endif %}" href="{% url 'contact' %}">Contact</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'about' %}">About Us</a>
+                            <a class="nav-link {% if request.path == '/about/' %}active{% endif %}" href="{% url 'about' %}">About Us</a>
                         </li>
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
-    
+    <div class="contents">
     {% block content %}
-    {% endblock %}
     
+    {% endblock %}
+    </div>
+    <footer class="footer">
+        <p>&copy; 2024 Zampen Chicken Tracking Management System. All rights reserved.</p>
+        <p><a href="{% url 'contact' %}">Contact Us</a></p>
+    </footer>
     <style>
+        .contents{
+            min-height: 100vh;
+        }
+        .footer {
+            background-color: #1d8034;
+            color: #ffffff;
+            padding: 20px 0;
+            text-align: center;
+        }
         .navbar {
             background-color: #1d8034;
         }

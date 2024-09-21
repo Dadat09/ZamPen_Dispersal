@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<body>
+<div class="container mt-5">
+    <h1>View Chicken</h1>
+    <div class="container d-flex" style="justify-content: end; padding: 0;">
+        <div class="col" style="display: flex; justify-content: end;">
+            <form method="get" action="{% url 'livestock' %}" class="mb-3 w-100 formhead">
+                <div class="input-group row gx-2 gy-2">
+                    <div class="col-12 col-md">
+                        <input type="text" name="q" class="form-control" placeholder="Search by title or type" value="{{ request.GET.q }}">
+                    </div>
+                    <div class="col-12 col-md">
+                        <select name="Tag Color" class="form-control">
+                            <option value="">All Tag Colors</option>
+                            {% for tag_color in unique_tag_colors %}
+                            <option value="{{ tag_color }}" 
+                            {% if request.GET.tag_color == tag_color %}
+                            selected
+                            {% endif %}>
+                                {{ tag_color }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-auto">
+                        <button type="submit" class="btn btn-success w-100">Search</button>
+                    </div>
+                    <div class="col-12 col-md-auto">
+                        <a href="" class="btn btn-success w-100">Add New Chicken</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Gender</th>
+                        <th>Batch</th>
+                        <th>Family</th>
+                        <th>Color</th>
+                        <th style="text-align: end;">Actions</th>
+                    </tr>
+                    <tbody>
+                        {% for livestock in page_obj %}
+                        <tr>
+                            <td>{{ livestock.id }}</td>
+                            <td>{{ livestock.gender }}</td>
+                            <td>{{ livestock.batch_no }}</td>
+                            <td>{{ livestock.livestock_family }}</td>
+                            <td>{{ livestock.tag_color }}</td>
+                            
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </thead>
+            </table>
+        </div>
+    </div>
+</body>
+{% endblock %}

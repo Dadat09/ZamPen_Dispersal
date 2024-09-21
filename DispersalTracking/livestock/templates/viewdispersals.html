@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class =" container mt-5">
+    <h1>View Dispersals</h1>
+    <div class="container d-flex" style="justify-content: end; padding: 0;">
+        <div class="col" style="display: flex; justify-content: end;">
+            <form method="get" action="{% url 'dispersal' %}" class="mb-3 w-100 formhead">
+                <div class="input-group row gx-2 gy-2">
+                    <div class="col-12 col-md">
+                        <input type="text" name="q" class="form-control" placeholder="Search by title or type" value="{{ request.GET.q }}">
+                    </div>
+                    <div class="col-12 col-md-auto">
+                        <button type="submit" class="btn btn-success w-100">Search</button>
+                    </div>
+                    <div class="col-12 col-md-auto">
+                        <a href="" class="btn btn-success w-100">Add Dispersal</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Grower</th>
+                    <th>Number of Dispersed Chickens</th>
+                    <th>Farm Location</th>
+                    <th>Dispersal Date</th>
+                    <th style="text-align: end;">Actions</th>
+                </tr>
+                <tbody>
+                    <tr>            
+                    </tr>
+                </tbody>
+            </thead>
+        </table>
+    </div>
+</div>
+{% endblock %}

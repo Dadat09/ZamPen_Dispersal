@@ -81,7 +81,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'Livestock',
         'USER' : 'root',
-        'PASSWORD' : 'livestock',
+        'PASSWORD' : 'w32m@ARRd3c_pR0j3cT',
         'HOST' : '127.0.0.1',
         'PORT' : 3306,
     }
