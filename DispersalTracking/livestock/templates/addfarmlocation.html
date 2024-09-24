@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Add Farm Location</h1>
+    <form method="POST" action="">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="id_name">Name</label>
+            <input type="text" class="form-control" id="id_name" name="name" required>
+        </div>
+        <div class="form-group">
+            <label for="id_address">Address</label>
+            <input type="text" class="form-control" id="id_address" name="address" required>
+        </div>
+        <div class="form-group">
+            <label for="id_description">Description</label>
+            <textarea class="form-control" id="id_description" name="description"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="id_grower">Grower</label>
+            <select class="form-control" id="id_grower" name="grower">
+                {% for grower in grower_list %}
+                    <option value="{{ grower.id }}">{{ grower.Name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Leaflet Map to select latitude and longitude -->
+        <div id="map" style="height: 400px;"></div>
+
+        <!-- Hidden fields for latitude and longitude -->
+        <input type="hidden" id="id_latitude" name="latitude">
+        <input type="hidden" id="id_longitude" name="longitude">
+
+        <button type="submit" class="btn btn-primary mt-3">Submit</button>
+    </form>
+</div>
+
+<!-- Include Leaflet.js and Map Script -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+<script>
+    // Initialize Leaflet map
+    var map = L.map('map').setView([10.3157, 123.8854], 13);  // Default center (example coords)
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    var marker;
+
+    // Add click event to map
+    map.on('click', function(e) {
+        var lat = e.latlng.lat;
+        var lng = e.latlng.lng;
+
+        // Update hidden form fields
+        document.getElementById('id_latitude').value = lat;
+        document.getElementById('id_longitude').value = lng;
+
+        // If marker already exists, remove it
+        if (marker) {
+            map.removeLayer(marker);
+        }
+
+        // Add marker to map
+        marker = L.marker([lat, lng]).addTo(map);
+    });
+</script>
+
+{% endblock %}

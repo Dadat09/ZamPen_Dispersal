@@ -1,40 +1,72 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class =" container mt-5">
-    <h1>View Farms</h1>
-    <div class="container d-flex" style="justify-content: end; padding: 0;">
-        <div class="col" style="display: flex; justify-content: end;">
-            <form method="get" action="{% url 'farm' %}" class="mb-3 w-100 formhead">
-                <div class="input-group row gx-2 gy-2">
-                    <div class="col-12 col-md">
-                        <input type="text" name="q" class="form-control" placeholder="Search by title or type" value="{{ request.GET.q }}">
+<body>
+    <div class="container mt-5">
+        <h1>View Farms</h1>
+        <div class="container d-flex" style="justify-content: end; padding: 0;">
+            <div class="col" style="display: flex; justify-content: end;">
+                <form method="get" action="{% url 'farm' %}" class="mb-3 w-100 formhead">
+                    <div class="input-group row gx-2 gy-2">
+                        <div class="col-12 col-md">
+                            <input type="text" name="q" class="form-control" placeholder="Search by name or address" value="{{ request.GET.q }}">
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <button type="submit" class="btn btn-success w-100">Search</button>
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <a href="{% url 'addfarm' %}" class="btn btn-success w-100">Add Farm</a>
+                        </div>
                     </div>
-                    <div class="col-12 col-md-auto">
-                        <button type="submit" class="btn btn-success w-100">Search</button>
-                    </div>
-                    <div class="col-12 col-md-auto">
-                        <a href="" class="btn btn-success w-100">Add Farm</a>
-                    </div>
-                </div>
-            </form>
+                </form>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <!-- Add sortable column headers -->
+                        <th>
+                            <a href="?{% if sort_by == 'name' and direction == 'asc' %}sort_by=name&direction=desc{% elif sort_by == 'name' and direction == 'desc' %}sort_by=name&direction=reset{% else %}sort_by=name&direction=asc{% endif %}">
+                                Name
+                                {% if sort_by == 'name' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?{% if sort_by == 'address' and direction == 'asc' %}sort_by=address&direction=desc{% elif sort_by == 'address' and direction == 'desc' %}sort_by=address&direction=reset{% else %}sort_by=address&direction=asc{% endif %}">
+                                Address
+                                {% if sort_by == 'address' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Description</th>
+                        <th>Grower</th>
+                        <th style="text-align: end;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for farm in page_obj %}
+                    <tr>
+                        <td>{{ farm.name }}</td>
+                        <td>{{ farm.address }}</td>
+                        <td>{{ farm.description }}</td>
+                        <td>{{ farm.grower }}</td>
+                        <td style="text-align: end;">
+                            <!-- Actions go here -->
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Address</th>
-                    <th>Description</th>
-                    <th>Grower</th>
-                    <th style="text-align: end;">Actions</th>
-                </tr>
-                <tbody>
-                    <tr>            
-                    </tr>
-                </tbody>
-            </thead>
-        </table>
-    </div>
-</div>
+</body>
+<style>
+    .table a {
+        text-decoration: none;
+        color: black;
+    }
+</style>
 {% endblock %}

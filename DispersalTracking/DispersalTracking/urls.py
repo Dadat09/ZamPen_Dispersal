@@ -16,8 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from livestock.views import indexView, AboutView, ContactView, ViewChickens, ViewFamilies, ViewFarms, ViewDispersals
-
+from livestock.views import ( indexView, AboutView, ContactView, ViewChickens, 
+                            ViewFamilies, ViewFarms, ViewDispersals, addChickens, addLivestockFamily, addFarmLocation)
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', indexView, name="index" ),
@@ -26,5 +26,8 @@ urlpatterns = [
     path('features/Livestock', ViewChickens, name = "livestock"),
     path('features/Families', ViewFamilies, name = "family"),
     path('features/Farms', ViewFarms, name = "farm"),
-    path('features/Dispersals', ViewDispersals, name = "dispersal")
+    path('features/Dispersals', ViewDispersals, name = "dispersal"),
+    path('features/Livestock/Add', addChickens, name = "addchickens"),
+    path('features/Families/Add', addLivestockFamily, name = "addfamily"),
+    path('features/Farms/Add', addFarmLocation, name = "addfarm")
 ]

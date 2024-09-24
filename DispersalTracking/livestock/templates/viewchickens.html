@@ -2,64 +2,117 @@
 {% load static %}
 {% block content %}
 <body>
-<div class="container mt-5">
-    <h1>View Chicken</h1>
-    <div class="container d-flex" style="justify-content: end; padding: 0;">
-        <div class="col" style="display: flex; justify-content: end;">
-            <form method="get" action="{% url 'livestock' %}" class="mb-3 w-100 formhead">
-                <div class="input-group row gx-2 gy-2">
-                    <div class="col-12 col-md">
-                        <input type="text" name="q" class="form-control" placeholder="Search by title or type" value="{{ request.GET.q }}">
+    <div class="container mt-5">
+        <h1>View Chicken</h1>
+        <div class="container d-flex" style="justify-content: end; padding: 0;">
+            <div class="col" style="display: flex; justify-content: end;">
+                <form method="get" action="{% url 'livestock' %}" class="mb-3 w-100 formhead">
+                    <div class="input-group row gx-2 gy-2">
+                        <div class="col-12 col-md">
+                            <input type="text" name="q" class="form-control" placeholder="Search by title or type" value="{{ request.GET.q }}">
+                        </div>
+                        <div class="col-12 col-md">
+                            <select name="tag_color" class="form-control">
+                                <option value="">All Tag Colors</option>
+                                {% for tag_color in unique_tag_colors %}
+                                <option value="{{ tag_color }}" 
+                                {% if request.GET.tag_color == tag_color %} selected {% endif %}>
+                                    {{ tag_color }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <button type="submit" class="btn btn-success w-100">Search</button>
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <a href="{% url 'addchickens' %}" class="btn btn-success w-100">Add New Chicken</a>
+                        </div>
                     </div>
-                    <div class="col-12 col-md">
-                        <select name="Tag Color" class="form-control">
-                            <option value="">All Tag Colors</option>
-                            {% for tag_color in unique_tag_colors %}
-                            <option value="{{ tag_color }}" 
-                            {% if request.GET.tag_color == tag_color %}
-                            selected
-                            {% endif %}>
-                                {{ tag_color }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-auto">
-                        <button type="submit" class="btn btn-success w-100">Search</button>
-                    </div>
-                    <div class="col-12 col-md-auto">
-                        <a href="" class="btn btn-success w-100">Add New Chicken</a>
-                    </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
-    </div>
         <div class="table-responsive">
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Gender</th>
-                        <th>Batch</th>
+                        <!-- Add sortable column headers -->
+                        <th>
+                            <a href="?{% if sort_by == 'ls_code' and direction == 'asc' %}sort_by=ls_code&direction=desc{% elif sort_by == 'ls_code' and direction == 'desc' %}sort_by=ls_code&direction=reset{% else %}sort_by=ls_code&direction=asc{% endif %}">
+                                ID
+                                {% if sort_by == 'ls_code' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?{% if sort_by == 'gender' and direction == 'asc' %}sort_by=gender&direction=desc{% elif sort_by == 'gender' and direction == 'desc' %}sort_by=gender&direction=reset{% else %}sort_by=gender&direction=asc{% endif %}">
+                                Gender
+                                {% if sort_by == 'gender' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?{% if sort_by == 'age_in_days' and direction == 'asc' %}sort_by=age_in_days&direction=desc{% elif sort_by == 'age_in_days' and direction == 'desc' %}sort_by=age_in_days&direction=reset{% else %}sort_by=age_in_days&direction=asc{% endif %}">
+                                Age
+                                {% if sort_by == 'age_in_days' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?{% if sort_by == 'batch_no' and direction == 'asc' %}sort_by=batch_no&direction=desc{% elif sort_by == 'batch_no' and direction == 'desc' %}sort_by=batch_no&direction=reset{% else %}sort_by=batch_no&direction=asc{% endif %}">
+                                Batch
+                                {% if sort_by == 'batch_no' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
                         <th>Family</th>
-                        <th>Color</th>
+                        <th>
+                            <a href="?{% if sort_by == 'tag_color' and direction == 'asc' %}sort_by=tag_color&direction=desc{% elif sort_by == 'tag_color' and direction == 'desc' %}sort_by=tag_color&direction=reset{% else %}sort_by=tag_color&direction=asc{% endif %}">
+                                Color
+                                {% if sort_by == 'tag_color' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?{% if sort_by == 'date_recorded' and direction == 'asc' %}sort_by=date_recorded&direction=desc{% elif sort_by == 'date_recorded' and direction == 'desc' %}sort_by=date_recorded&direction=reset{% else %}sort_by=date_recorded&direction=asc{% endif %}">
+                                Date Recorded
+                                {% if sort_by == 'date_recorded' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
                         <th style="text-align: end;">Actions</th>
                     </tr>
-                    <tbody>
-                        {% for livestock in page_obj %}
-                        <tr>
-                            <td>{{ livestock.id }}</td>
-                            <td>{{ livestock.gender }}</td>
-                            <td>{{ livestock.batch_no }}</td>
-                            <td>{{ livestock.livestock_family }}</td>
-                            <td>{{ livestock.tag_color }}</td>
-                            
-                        </tr>
-                        {% endfor %}
-                    </tbody>
                 </thead>
+                <tbody>
+                    {% for livestock in page_obj %}
+                    <tr>
+                        <td>{{ livestock.ls_code }}</td>
+                        <td>{{ livestock.gender }}</td>
+                        <td>{{ livestock.age_in_days }}</td>
+                        <td>{{ livestock.batch_no }}</td>
+                        <td>{{ livestock.livestock_family }}</td>
+                        <td>{{ livestock.tag_color }}</td>
+                        <td>{{ livestock.date_recorded|date:"Y-m-d" }}</td>
+                        <td style="text-align: end;">
+                            <!-- Actions go here -->
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
             </table>
         </div>
     </div>
-</body>
+    </body>
+<style>
+    .table a{
+        text-decoration: none;
+        color: black;
+    }
+</style>
 {% endblock %}

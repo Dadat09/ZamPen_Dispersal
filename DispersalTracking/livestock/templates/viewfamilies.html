@@ -13,7 +13,7 @@
                         <button type="submit" class="btn btn-success w-100">Search</button>
                     </div>
                     <div class="col-12 col-md-auto">
-                        <a href="" class="btn btn-success w-100">Add New Family</a>
+                        <a href="{%url 'addfamily'%}" class="btn btn-success w-100">Add New Family</a>
                     </div>
                 </div>
             </form>
@@ -25,6 +25,7 @@
                 <tr>
                     <th>ID</th>
                     <th>Locations</th>
+                    <th>Batch Number</th>
                     <th>Brood Number</th>
                     <th>Hens</th>
                     <th>Roosters</th>
@@ -32,8 +33,17 @@
                     <th style="text-align: end;">Actions</th>
                 </tr>
                 <tbody>
-                    <tr>            
+                    {%for family in page_obj%}
+                    <tr>
+                        <td>{{ family.family_id }}</td>
+                        <td>{{ family.cage_location }}</td>
+                        <td>{{family.date_recorded}}</td>
+                        <td>{{family.brood_generation_number}}</td>
+                        <td>{{family.hen_count}}</td>
+                        <td>{{family.rooster_count}}</td>
+                        <td>{{family.date_recorded}}</td>
                     </tr>
+                    {%endfor%}
                 </tbody>
             </thead>
         </table>

@@ -21,12 +21,8 @@ class LivestockFamilyManager(models.Manager):
 class LivestockFamily(models.Model):
     family_id = models.CharField(primary_key=True, max_length=155, null=False)
     cage_location = models.CharField(max_length=100)
-    date_recorded = models.DateField()
+    date_recorded = models.DateField(default=timezone.now)
     brood_generation_number = models.IntegerField(null=True, blank=True, default=1)
-
-    hens = models.ManyToManyField('Livestock', related_name='family_female', blank=True)
-    roosters = models.ManyToManyField('Livestock', related_name='family_male', blank=True)
-
     objects = LivestockFamilyManager()
 
     def __str__(self):
@@ -41,10 +37,19 @@ class Livestock(models.Model):
     generation = models.IntegerField()
     batch_no = models.IntegerField()
     tag_color = models.CharField(max_length=50)
-    date_recorded = models.DateField()
+    date_recorded = models.DateField(default=timezone.now)
     livestock_family = models.ForeignKey('LivestockFamily', on_delete=models.CASCADE, null=True, blank=True)
     objects = models.Manager()  # The default manager
     chicken_family_objects = LivestockFamilyManager()  # The custom manager.
+
+    def __str__(self):
+        return self.ls_code
+
+    def update_age(self):
+        if self.date_recorded:
+            current_age = (timezone.now().date() - self.date_recorded).days
+            self.age_in_days = current_age
+            self.save()
 
     
 class Dispersal(models.Model):

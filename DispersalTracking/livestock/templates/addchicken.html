@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container" style="padding-bottom: 10vh;">
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-6">
+            <div class="card shadow-lg p-5 custom-form">
+                <h2 class="mb-4 text-center">Add Chicken</h2>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <!-- Render other fields -->
+                    {% for field in form %}
+                        {% if field.name != 'tag_color' %}
+                            <div class="form-group">
+                                {{ field.label_tag }}
+                                {{ field }}
+                                {{ field.errors }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Render tag_color as a dropdown and text input -->
+                    <div class="form-group">
+                        <label for="tag_color">Tag Color</label>
+                        <select id="tag_color" class="form-control" name="tag_color" onchange="toggleInput(this)">
+                            <option value="">Choose a tag color</option>
+                            {% for color in form.fields.tag_color.choices %}
+                                <option value="{{ color.0 }}">{{ color.1 }}</option>
+                            {% endfor %}
+                            <option value="other">Other</option>
+                        </select>
+                        <input type="text" name="custom_tag_color" placeholder="Type a new tag color" class="form-control mt-2" id="custom_color_input" style="display:none;" />
+                    </div>
+                    <br>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleInput(select) {
+        const customInput = document.getElementById('custom_color_input');
+        if (select.value === 'other') {
+            customInput.style.display = 'block';
+            customInput.value = ''; // Clear input
+        } else {
+            customInput.style.display = 'none';
+            customInput.value = select.value; // Set the input to selected value
+        }
+    }
+</script>
+{% endblock %}

@@ -23,3 +23,6 @@ class Grower(models.Model):
     zipcode = models.CharField(max_length=5, blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey(User, related_name="+", on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.Name.get_full_name() if self.Name else "No Name"
