@@ -1,5 +1,6 @@
 from django import forms
-from .models import Livestock, LivestockFamily, FarmLocation
+from .models import Livestock, LivestockFamily, FarmLocation, Dispersal
+from django.db.models import Q 
 from auth_user.models import Grower
 
 class LivestockForm(forms.ModelForm):
@@ -106,13 +107,70 @@ class LivestockFamilyForm(forms.ModelForm):
         return livestock_family
 
 class FarmLocationForm(forms.ModelForm):
+    name = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}))
+    
+    address = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}))
+    
+    description = forms.CharField(
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 4}))
+
+    grower = forms.ModelChoiceField(
+        queryset=Grower.objects.all(),
+        widget=forms.Select(attrs={"class": "form-control"}))
+
+    latitude = forms.DecimalField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        max_digits=9, decimal_places=6
+    )
+    longitude = forms.DecimalField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        max_digits=9, decimal_places=6
+    )
+
     class Meta:
         model = FarmLocation
-        fields = ['name', 'address', 'description', 'grower']
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 4}),
-        }
+        fields = ['name', 'address', 'description', 'grower', 'latitude', 'longitude']
+
+class DispersalForm(forms.ModelForm):
+    grower = forms.ModelChoiceField(
+        queryset=Grower.objects.all(),
+        widget=forms.Select(attrs={"class": "form-control"})
+    )
     
-    # Adding hidden fields for latitude and longitude to be filled by Leaflet map
-    latitude = forms.DecimalField(widget=forms.HiddenInput())
-    longitude = forms.DecimalField(widget=forms.HiddenInput())
+    dispersal_date = forms.DateField(
+        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"})
+    )
+    
+    families_dispersed = forms.ModelMultipleChoiceField(
+        queryset=LivestockFamily.objects.filter(dispersal__isnull=True),  # Initial queryset for new dispersal
+        widget=forms.CheckboxSelectMultiple()
+    )
+    
+    farmlocation = forms.ModelChoiceField(
+        queryset=FarmLocation.objects.all(),
+        widget=forms.Select(attrs={"class": "form-control"})
+    )
+    
+    class Meta:
+        model = Dispersal
+        fields = ['grower', 'dispersal_date', 'families_dispersed', 'farmlocation']
+    
+    def __init__(self, *args, **kwargs):
+        # Retrieve the instance (Dispersal object) being edited
+        instance = kwargs.get('instance', None)
+        
+        super(DispersalForm, self).__init__(*args, **kwargs)
+
+        if instance:
+            # Get the families already associated with the current dispersal
+            current_families = instance.families_dispersed.all()
+            
+            # Include both the families not yet dispersed and the current families of this dispersal
+            self.fields['families_dispersed'].queryset = LivestockFamily.objects.filter(
+                Q(dispersal__isnull=True) | Q(family_id__in=current_families)
+            )
+
+            # Preselect the families already dispersed to this instance
+            self.fields['families_dispersed'].initial = current_families

@@ -6,8 +6,8 @@ from django.utils import timezone
 class FarmLocation(models.Model):
     name = models.CharField(max_length=100)
     address = models.CharField(max_length=255)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=False, blank=True, default=0.0)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=False, blank=True, default=0.0)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, default=None)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, default=None)
     description = models.TextField(blank=True, null=True)
     grower = models.ForeignKey(Grower, related_name='farm_locations', null=False, blank=True, on_delete=models.CASCADE, default=1)
 
@@ -55,7 +55,7 @@ class Livestock(models.Model):
 class Dispersal(models.Model):
     grower = models.ForeignKey(Grower, on_delete=models.CASCADE)
     dispersal_date = models.DateField()
-    chickens_dispersed = models.ManyToManyField(Livestock)
+    families_dispersed = models.ManyToManyField(LivestockFamily)
     farmlocation = models.ForeignKey(FarmLocation, on_delete=models.CASCADE)
 
     def __str__(self):

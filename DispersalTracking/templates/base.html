@@ -31,7 +31,7 @@
                             </a>
                             <ul class="dropdown-menu active" aria-labelledby="featuresDropdown">
                                 <li><a class="dropdown-item " href="{%url 'livestock'%}">Zampen Chickens</a></li>
-                                <li><a class="dropdown-item" href="">Growers</a></li>
+                                <li><a class="dropdown-item" href="{%url 'grower'%}">Growers</a></li>
                                 <li><a class="dropdown-item" href="{%url 'farm'%}">Farm Locations</a></li>    
                                 <li><a class="dropdown-item" href="{%url 'family'%}">Chicken Families</a></li>
                                 <li><a class="dropdown-item" href="{%url 'dispersal'%}">Dispersals</a></li>
@@ -87,13 +87,21 @@
             background-color: #1d8034;
             color: black;
         }
+        .footer a{
+        text-decoration: none;
+        color: gray;
+        }
+        .footer a:hover{
+            color: white;
+            }
     </style>
-
+    <script src="https://kit.fontawesome.com/008d2189bb.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
             crossorigin="anonymous"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet.awesome-markers/dist/leaflet.awesome-markers.js"></script>
     <script src="https://kit.fontawesome.com/008d2189bb.js" crossorigin="anonymous"></script>
+    
 </body>
 </html>

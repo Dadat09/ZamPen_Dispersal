@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container" style="padding-bottom: 10vh;">
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-6">
+            <div class="card shadow-lg p-5 custom-form">
+                <h2 class="mb-4 text-center">Edit Grower</h2>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        {{ grower_form.user_choice.label }}
+                        {{ grower_form.user_choice }}  <!-- Dropdown for user choice -->
+                    </div>
+
+                    <div class="form-group" id="new-user-form" style="display: none;">
+                        {{ user_form.as_p }}  <!-- Render the user form -->
+                    </div>
+
+                    <div class="form-group" id="existing-user-form" style="display: none;">
+                        {{ grower_form.existing_user.label }}
+                        {{ grower_form.existing_user }}  <!-- Dropdown for selecting an existing user -->
+                        {{ grower_form.existing_user.errors }} <!-- Display field errors -->
+                    </div>
+
+                    <div class="form-group">
+                        {{ grower_form.ContactNo.label }}
+                        {{ grower_form.ContactNo }}  <!-- Grower's contact number -->
+                        {{ grower_form.ContactNo.errors }} <!-- Display field errors -->
+                    </div>
+
+                    <div class="form-group">
+                        {{ grower_form.Email.label }}
+                        {{ grower_form.Email }}  <!-- Grower's email -->
+                        {{ grower_form.Email.errors }} <!-- Display field errors -->
+                    </div>
+
+                    <div class="form-group">
+                        {{ grower_form.barangay.label }}
+                        {{ grower_form.barangay }}  <!-- Barangay -->
+                        {{ grower_form.barangay.errors }} <!-- Display field errors -->
+                    </div>
+
+                    <div class="form-group">
+                        {{ grower_form.city.label }}
+                        {{ grower_form.city }}  <!-- City -->
+                        {{ grower_form.city.errors }} <!-- Display field errors -->
+                    </div>
+
+                    <div class="form-group">
+                        {{ grower_form.province.label }}
+                        {{ grower_form.province }}  <!-- Province -->
+                        {{ grower_form.province.errors }} <!-- Display field errors -->
+                    </div>
+
+                    <div class="form-group">
+                        {{ grower_form.zipcode.label }}
+                        {{ grower_form.zipcode }}  <!-- Zip code -->
+                        {{ grower_form.zipcode.errors }} <!-- Display field errors -->
+                    </div>
+
+                    <div class="form-group">
+                        {{ grower_form.notes.label }}
+                        {{ grower_form.notes }}  <!-- Notes -->
+                        {{ grower_form.notes.errors }} <!-- Display field errors -->
+                    </div>
+
+                    <br>
+                    <button type="submit" class="btn btn-primary btn-block">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userChoiceSelect = document.querySelector('select[name="user_choice"]');
+        const existingUserForm = document.getElementById('existing-user-form');
+        const newUserForm = document.getElementById('new-user-form');
+
+        userChoiceSelect.addEventListener('change', function() {
+            if (this.value === 'existing') {
+                existingUserForm.style.display = 'block';
+                newUserForm.style.display = 'none';
+                // Show the actual dropdown list
+                document.querySelector('#existing-user-form select').style.display = 'block';
+            } else if (this.value === 'other') {
+                existingUserForm.style.display = 'none';
+                newUserForm.style.display = 'block';
+            } else {
+                existingUserForm.style.display = 'none';
+                newUserForm.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -17,17 +17,34 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from livestock.views import ( indexView, AboutView, ContactView, ViewChickens, 
-                            ViewFamilies, ViewFarms, ViewDispersals, addChickens, addLivestockFamily, addFarmLocation)
+                            ViewFamilies, ViewFarms, ViewDispersals, addChickens, addLivestockFamily, 
+                            addFarmLocation, addDispersal, editLivestock, editLivestockFamily, editFarmLocation, editDispersal, 
+                            deleteLivestock, deleteFamily, deleteFarm, deleteDispersal, fetch_farms)
+from auth_user.views import ViewGrowers, AddGrowers, editGrower, deleteGrower
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', indexView, name="index" ),
     path('about/', AboutView, name='about'),
     path('contact/', ContactView, name='contact'),
-    path('features/Livestock', ViewChickens, name = "livestock"),
-    path('features/Families', ViewFamilies, name = "family"),
-    path('features/Farms', ViewFarms, name = "farm"),
-    path('features/Dispersals', ViewDispersals, name = "dispersal"),
-    path('features/Livestock/Add', addChickens, name = "addchickens"),
-    path('features/Families/Add', addLivestockFamily, name = "addfamily"),
-    path('features/Farms/Add', addFarmLocation, name = "addfarm")
+        path('features/Livestock', ViewChickens, name = "livestock"),
+        path('features/Families', ViewFamilies, name = "family"),
+        path('features/Farms', ViewFarms, name = "farm"),
+        path('features/Dispersals', ViewDispersals, name = "dispersal"),
+        path('features/Growers', ViewGrowers, name = "grower"),
+        path('features/Livestock/Add', addChickens, name = "addchickens"),
+        path('features/Families/Add', addLivestockFamily, name = "addfamily"),
+        path('features/Farms/Add', addFarmLocation, name = "addfarm"),
+        path('features/Dispersals/Add', addDispersal, name = "adddispersal"),
+        path('features/Livestock/edit/<int:pk>', editLivestock, name = "editchickens"),
+        path('features/Family/edit/<int:pk>', editLivestockFamily, name='editfamily'),
+        path('features/Farms/edit/<int:pk>', editFarmLocation, name='editfarm'),
+        path('features/Dispersals/edit/<int:pk>', editDispersal, name="editdispersal"),
+        path('features/Growers/Add', AddGrowers, name = "addgrower"),
+        path('features/Growers/edit/<int:pk>', editGrower, name='editgrower'),
+        path('features/Livestock/delete/<int:pk>/', deleteLivestock, name='delete_livestock'),
+        path('features/Family/delete/<int:pk>/', deleteFamily, name='deletefamily'),
+        path('features/Farms/delete/<int:pk>/', deleteFarm, name='deletefarm'),
+        path('features/Dispersals/delete/<int:pk>', deleteDispersal, name='deletedispersal'),
+        path('features/Growers/delete/<int:pk>', deleteGrower, name='deletegrower'),
+        path('path/to/fetch/farms/', fetch_farms, name='fetch_farms'),
 ]

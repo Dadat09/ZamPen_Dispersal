@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container" style="padding-bottom: 10vh;">
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-6">
+            <div class="card shadow-lg p-5 custom-form">
+                <h2 class="mb-4 text-center">Add Dispersal</h2>
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Grower and Dispersal Date -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="id_grower" class="form-label">Grower</label>
+                                {{ form.grower }}
+                                {{ form.grower.errors }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="id_dispersal_date" class="form-label">Dispersal Date</label>
+                                {{ form.dispersal_date }}
+                                {{ form.dispersal_date.errors }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Families Dispersed with search and scrollable list -->
+                    <div class="mb-3">
+                        <label for="id_families_dispersed" class="form-label">Families Dispersed</label>
+                        
+                        <!-- Search input for filtering checkboxes -->
+                        <input type="text" id="familySearch" onkeyup="filterFamilies()" placeholder="Search for families..." class="form-control mb-2">
+                        
+                        <!-- Scrollable list of checkboxes -->
+                        <div id="familiesList" style="max-height: 400px; overflow-y: auto; background-color:#ededed; border: solid 1px; border-color:black; padding-left: 5px;">
+                            <div class="families-container">
+                                {{ form.families_dispersed }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Farm Location filtered by selected Grower -->
+                    <div class="mb-3">
+                        <label for="id_farmlocation" class="form-label">Farm Location</label>
+                        {{ form.farmlocation }}
+                        {{ form.farmlocation.errors }}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Full width for the list container */
+    #familiesList {
+        width: 100%;
+    }
+
+    /* Ensure each checkbox and label is laid out horizontally */
+    .families-container div {
+        display: block;
+        width: 100%;
+        padding: 5px 0;
+    }
+
+    /* Keep the checkbox and label aligned */
+    .families-container label {
+        display: flex;
+        align-items: center;
+        width: 100%;
+    }
+
+    /* Ensure the checkbox is aligned next to the label text */
+    .families-container input[type="checkbox"] {
+        margin-right: 10px;
+    }
+
+    /* Ensure labels don't break into multiple lines */
+    .families-container label {
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+</style>
+
+<script>
+    // JavaScript function to filter checkboxes in the scrollable list
+    function filterFamilies() {
+        var input, filter, div, labels, i, txtValue;
+        input = document.getElementById('familySearch');
+        filter = input.value.toUpperCase();
+        div = document.getElementById("familiesList");
+        labels = div.getElementsByTagName('label');
+        
+        for (i = 0; i < labels.length; i++) {
+            txtValue = labels[i].textContent || labels[i].innerText;
+            if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                labels[i].style.display = "";
+            } else {
+                labels[i].style.display = "none";
+            }
+        }
+    }
+
+    // Function to filter farms based on the selected grower
+    document.getElementById('id_grower').addEventListener('change', function() {
+        var growerId = this.value;
+        var farmLocationField = document.getElementById('id_farmlocation');
+        
+        // Clear current options
+        farmLocationField.innerHTML = '';
+        
+        // Fetch the farms for the selected grower
+        fetch('/path/to/fetch/farms/?grower_id=' + growerId)
+            .then(response => response.json())
+            .then(data => {
+                data.farms.forEach(function(farm) {
+                    var option = document.createElement('option');
+                    option.value = farm.id;
+                    option.textContent = farm.name;
+                    farmLocationField.appendChild(option);
+                });
+            });
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container" style="padding-bottom: 10vh;">
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-6">
+            <div class="card shadow-lg p-5 custom-form">
+                <h2 class="mb-4 text-center">Edit Dispersal</h2>
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <!-- Grower and Dispersal Date -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="id_grower" class="form-label">Grower</label>
+                                {{ form.grower }}
+                                {{ form.grower.errors }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="id_dispersal_date" class="form-label">Dispersal Date</label>
+                                {{ form.dispersal_date }}
+                                {{ form.dispersal_date.errors }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Families Dispersed with search and scrollable list -->
+                    <div class="mb-3">
+                        <label for="id_families_dispersed" class="form-label">Families Dispersed</label>
+                        
+                        <!-- Search input for filtering checkboxes -->
+                        <input type="text" id="familySearch" onkeyup="filterFamilies()" placeholder="Search for families..." class="form-control mb-2">
+                        
+                        <!-- Scrollable list of checkboxes -->
+                        <div id="familiesList" style="max-height: 400px; overflow-y: auto; background-color:#ededed; border: solid 1px; border-color:black; padding-left: 5px;">
+                            <div class="families-container">
+                                {% for family in form.families_dispersed %}
+                                    <div>
+                                        <input type="checkbox" name="families_dispersed" value="{{ family.choice_value }}" id="{{ family.choice_id }}" {% if family.is_checked %} checked {% endif %}>
+                                        <label for="{{ family.choice_id }}">{{ family.choice_label }}</label>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Farm Location -->
+                    <div class="mb-3">
+                        <label for="id_farmlocation" class="form-label">Farm Location</label>
+                        {{ form.farmlocation }}
+                        {{ form.farmlocation.errors }}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">Update</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // JavaScript function to filter checkboxes in the scrollable list
+    function filterFamilies() {
+        var input, filter, div, labels, i, txtValue;
+        input = document.getElementById('familySearch');
+        filter = input.value.toUpperCase();
+        div = document.getElementById("familiesList");
+        labels = div.getElementsByTagName('label');
+        
+        for (i = 0; i < labels.length; i++) {
+            txtValue = labels[i].textContent || labels[i].innerText;
+            if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                labels[i].style.display = "";
+            } else {
+                labels[i].style.display = "none";
+            }
+        }
+    }
+</script>
+
+{% endblock %}
