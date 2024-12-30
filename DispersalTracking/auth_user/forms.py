@@ -1,5 +1,5 @@
 from django import forms
-from .models import Grower, User  # Import your custom User model
+from .models import Grower, User, Farmer  # Import your custom User model
 
 class UserForm(forms.ModelForm):
     user_name = forms.CharField(
@@ -40,7 +40,12 @@ class UserForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['first_name', 'middle_name', 'last_name', 'email', 'profile_picture', 'password', 'user_name']
+        fields = ['user_name', 'first_name', 'middle_name', 'last_name', 'email', 'profile_picture', 'password']
+    
+    def __init__(self, *args, **kwargs):
+        super(UserForm, self).__init__(*args, **kwargs)
+        # Map user_name to the actual username field
+        self.fields['user_name'].initial = self.instance.username
         
 class GrowerForm(forms.ModelForm):
     user_choice = forms.ChoiceField(
@@ -121,3 +126,98 @@ class GrowerForm(forms.ModelForm):
             instance.save()
         return instance
 
+class SimpleGrowerForm(forms.ModelForm):
+    ContactNo = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    Email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    barangay = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    city = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    province = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    zipcode = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    notes = forms.CharField(
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": "4"}),
+        required=False
+    )
+
+    class Meta:
+        model = Grower
+        fields = ['ContactNo', 'Email', 'barangay', 'city', 'province', 'zipcode', 'notes']
+
+    def clean(self):
+        """Ensure that empty fields retain the instance's existing values."""
+        cleaned_data = super().clean()
+
+        # Retain existing ContactNo if not provided
+        if not cleaned_data.get('ContactNo') and self.instance.pk:
+            cleaned_data['ContactNo'] = self.instance.ContactNo
+
+        # Retain existing Email if not provided
+        if not cleaned_data.get('Email') and self.instance.pk:
+            cleaned_data['Email'] = self.instance.Email
+
+        return cleaned_data
+
+class FarmerForm(forms.ModelForm):
+    ContactNo = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    Email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"class": "form-control"}),
+        required=False
+    )
+
+    class Meta:
+        model = Farmer
+        fields = ['ContactNo', 'Email']
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Retain existing data if fields are empty
+        if not cleaned_data.get('ContactNo') and self.instance.pk:
+            cleaned_data['ContactNo'] = self.instance.ContactNo
+        if not cleaned_data.get('Email') and self.instance.pk:
+            cleaned_data['Email'] = self.instance.Email
+        return cleaned_data
+
+
+class FarmerForm2(forms.ModelForm):
+    user_choice = forms.ChoiceField(
+        choices=[('none', 'No User'), ('existing', 'Link to Existing User'), ('other', 'Create New User')],
+        widget=forms.Select(attrs={"class": "form-control"})
+    )
+    existing_user = forms.ModelChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-control"})
+    )
+
+    ContactNo = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    Email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"class": "form-control"}),
+        required=False
+    )
+
+    class Meta:
+        model = Farmer
+        fields = ['ContactNo', 'Email', 'user_choice', 'existing_user']

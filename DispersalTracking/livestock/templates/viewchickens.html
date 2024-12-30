@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends layout %}
 {% load static %}
 {% block content %}
 <body>
@@ -25,9 +25,11 @@
                         <div class="col-12 col-md-auto">
                             <button type="submit" class="btn btn-success w-100">Search</button>
                         </div>
+                        {% if request.user.is_staff %}
                         <div class="col-12 col-md-auto">
                             <a href="{% url 'addchickens' %}" class="btn btn-success w-100">Add New Chicken</a>
                         </div>
+                        {% endif %}
                     </div>
                 </form>
             </div>
@@ -78,7 +80,7 @@
                                 {% endif %}
                             </a>
                         </th>
-                        <th>
+                        <th style="{% if not request.user.is_staff %}text-align: end;{% endif %}">
                             <a href="?{% if sort_by == 'date_recorded' and direction == 'asc' %}sort_by=date_recorded&direction=desc{% elif sort_by == 'date_recorded' and direction == 'desc' %}sort_by=date_recorded&direction=reset{% else %}sort_by=date_recorded&direction=asc{% endif %}">
                                 Date Recorded
                                 {% if sort_by == 'date_recorded' %}
@@ -86,7 +88,9 @@
                                 {% endif %}
                             </a>
                         </th>
+                        {% if request.user.is_staff %}
                         <th style="text-align: end;">Actions</th>
+                        {%endif%}
                     </tr>
                 </thead>
                 <tbody>
@@ -98,13 +102,17 @@
                         <td>{{ livestock.batch_no }}</td>
                         <td>{{ livestock.livestock_family }}</td>
                         <td>{{ livestock.tag_color }}</td>
-                        <td>{{ livestock.date_recorded|date:"Y-m-d" }}</td>
+                        <td style="{% if not request.user.is_staff %}text-align: end;{% endif %}">
+                            {{ livestock.date_recorded|date:"Y-m-d" }}
+                        </td>
+                        {% if request.user.is_staff %}
                         <td style="text-align: end;">
                             <a href="{% url 'editchickens' livestock.id %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-pen-to-square"></i></a>
                             <button type="button" class="btn btn-danger btn-sm" onclick="openDeleteModal({{ livestock.id }})">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -1,0 +1,244 @@
+{% extends 'admin.html' %}
+{% load static %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<script id="weeks-data" type="application/json">{{ weeks|json_script }}</script>
+<script id="chickens-data" type="application/json">{{ chickens_added|json_script }}</script>
+<div class="content container mt-5">
+    <h1 class="text-center mb-4" style="font-weight: 700; color: #1B3A2D; text-transform: uppercase; letter-spacing: 2px;">Dashboard Overview</h1>
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-8">
+            <div class="row">
+                <div class="col-md-3 col-sm-6 col-xs-12 mb-2">
+                    <a href="" class="btn btn-block custom-btn" style="background-Color: #efa08f!important;"> <!-- Dark Red background -->
+                        <div class="btn-content">
+                            <h4>Livestock</h4>
+                            <h4 style="color: #000000 !important;">{{ total_livestock_count }}</h4> <!-- Keep numbers white -->
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3 col-sm-6 col-xs-12 mb-2">
+                    <a href="" class="btn btn-block custom-btn" style="background-Color: #63e8b8!important;"> <!-- Medium Green background -->
+                        <div class="btn-content">
+                            <h4>Families</h4>
+                            <h4 style="color: #000000 !important;">{{ families_not_dispersed }}</h4> <!-- Keep numbers white -->
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3 col-sm-6 col-xs-12 mb-2">
+                    <a href="" class="btn btn-block custom-btn" style="background-Color: #57d3f1!important;"> <!-- Dark Blue background -->
+                        <div class="btn-content">
+                            <h4>Dispersal</h4>
+                            <h4 style="color: #000000 !important;">{{ dispersed_families }}</h4> <!-- Keep numbers white -->
+                        </div>
+                    </a>
+                </div>
+                <div class="col-md-3 col-sm-6 col-xs-12 mb-2">
+                    <a href="" class="btn btn-block custom-btn" style="background-Color: #f5eb8b!important;"> <!-- Dark Blue background -->
+                        <div class="btn-content">
+                            <h4>Farms</h4>
+                            <h4 style="color: #000000 !important;">{{ total_farms_count }}</h4> <!-- Keep numbers white -->
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row text-center justify-content-center">
+        <div class="col-md-4 col-sm-12 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h3 class="card-title" style="font-weight: 600; color: #1B3A2D;">Families Dispersed</h3>
+                    <canvas id="familiesNotDispersedChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-sm-12 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h3 class="card-title" style="font-weight: 600; color: #1B3A2D;">Livestock by Gender</h3>
+                    <canvas id="genderChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-sm-12 mb-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h3 class="card-title" style="font-weight: 600; color: #1B3A2D;">Chickens Added by Date</h3>
+                    <canvas id="chickensAddedChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Farms Table -->
+    <div class="mt-5">
+        <h2 class="text-center mb-4" style="font-weight: 600; color: #1B3A2D;">Farms List</h2>
+        <div class="text-center mb-4">
+            <a href="{% url 'export_farms_csv' %}" class="btn btn-success">Download Farms CSV</a>
+            <a href="{% url 'download_farms_pdf' %}" class="btn btn-danger">Download Farms PDF</a>
+        </div>
+        <!-- Search Bar -->
+        <div class="input-group mb-3" style="max-width: 400px; margin: 0 auto;">
+            <input type="text" id="searchInput" class="form-control" placeholder="Search Farms..." aria-label="Search Farms">
+            <div class="input-group-append">
+            </div>
+        </div>
+
+        <!-- Farms Table -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover text-center" id="farmsTable">
+                <thead class="thead-light">
+                    <tr style="background-color: #E8F5E9; color: #1B3A2D;">
+                        <th>Farm Name</th>
+                        <th>Owner</th>
+                        <th>Address</th>
+                        <th>Dispersed Families</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if farms %}
+                        {% for farm in farms %}
+                        <tr>
+                            <td>{{ farm.name }}</td>
+                            <td>{{ farm.grower.Name }}</td>  <!-- Adjust based on your Grower model field -->
+                            <td>{{ farm.address }}</td>
+                            <td>
+                                {% if farm.dispersal_set.all %}
+                                    <ul class="list-unstyled">
+                                        {% for dispersal in farm.dispersal_set.all %}
+                                            <li>
+                                                <ul class="list-unstyled">
+                                                    {% for family in dispersal.families_dispersed.all %}
+                                                        <li>{{ family }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <span>No dispersals available for this farm.</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center">No farms available</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="mt-4 d-flex justify-content-center">
+            <nav aria-label="Page navigation">
+                <ul class="pagination">
+                    {% if farms.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ farms.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item disabled">
+                        <a class="page-link">{{ farms.number }}</a>
+                    </li>
+
+                    {% if farms.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ farms.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ farms.paginator.num_pages }}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<script>
+// Dynamic Search
+document.getElementById('searchInput').addEventListener('keyup', function() {
+    let input = this.value.toLowerCase();
+    let rows = document.querySelectorAll('#farmsTable tbody tr');
+
+    rows.forEach(row => {
+        let farmName = row.cells[0].textContent.toLowerCase();
+        let ownerName = row.cells[1].textContent.toLowerCase();
+        let address = row.cells[2].textContent.toLowerCase();
+
+        if (farmName.includes(input) || ownerName.includes(input) || address.includes(input)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
+
+    // Families Not Dispersed vs Dispersed Families
+    var familiesNotDispersedCtx = document.getElementById('familiesNotDispersedChart').getContext('2d');
+    var familiesNotDispersedChart = new Chart(familiesNotDispersedCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Not Dispersed', 'Dispersed'],
+            datasets: [{
+                label: 'Families Count',
+                data: [{{ families_not_dispersed }}, {{ dispersed_families }}],
+                backgroundColor: ['rgba(52, 152, 219, 0.6)', 'rgba(231, 76, 60, 0.6)'],
+                borderColor: ['rgba(52, 152, 219, 1)', 'rgba(231, 76, 60, 1)'],
+                borderWidth: 2
+            }]
+        }
+    });
+
+    // Livestock Count by Gender
+    var genderCtx = document.getElementById('genderChart').getContext('2d');
+    var genderChart = new Chart(genderCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Male', 'Female'],
+            datasets: [{
+                label: 'Gender Count',
+                data: [{{ male_count }}, {{ female_count }}],
+                backgroundColor: ['rgba(26, 188, 156, 0.6)', 'rgba(241, 196, 15, 0.6)'],
+                borderColor: ['rgba(26, 188, 156, 1)', 'rgba(241, 196, 15, 1)'],
+                borderWidth: 2
+            }]
+        },
+    });
+
+    var weeks = {{ weeks|safe }};
+    var chickensAdded = {{ chickens_added|safe }};
+
+    var chickensAddedCtx = document.getElementById('chickensAddedChart').getContext('2d');
+    var chickensAddedChart = new Chart(chickensAddedCtx, {
+        type: 'bar',
+        data: {
+            labels: weeks,  // Directly use the weeks array
+            datasets: [{
+                label: 'Chickens Added',
+                data: chickensAdded,  // Directly use the chickens added array
+                backgroundColor: 'rgba(52, 152, 219, 0.6)',
+                borderColor: 'rgba(52, 152, 219, 1)',
+                borderWidth: 2,
+                fill: true
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

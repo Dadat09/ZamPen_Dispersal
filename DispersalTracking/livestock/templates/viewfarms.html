@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends layout %}
 {% block content %}
 <body>
     <div class="container mt-5">
@@ -14,7 +14,9 @@
                             <button type="submit" class="btn btn-success w-100">Search</button>
                         </div>
                         <div class="col-12 col-md-auto">
+                            {% if user.is_authenticated %}
                             <a href="{% url 'addfarm' %}" class="btn btn-success w-100">Add Farm</a>
+                        {% endif %}
                         </div>
                     </div>
                 </form>

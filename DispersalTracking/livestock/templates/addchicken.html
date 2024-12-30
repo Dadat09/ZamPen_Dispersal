@@ -8,9 +8,10 @@
                 <h2 class="mb-4 text-center">Add Chicken</h2>
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
+                    
                     <!-- Render other fields -->
                     {% for field in form %}
-                        {% if field.name != 'tag_color' %}
+                        {% if field.name != 'tag_color' and field.name != 'custom_tag_color' %}
                             <div class="form-group">
                                 {{ field.label_tag }}
                                 {{ field }}
@@ -18,19 +19,24 @@
                             </div>
                         {% endif %}
                     {% endfor %}
-
-                    <!-- Render tag_color as a dropdown and text input -->
+                    
+                    <!-- Render tag_color as a dropdown and text input for custom color -->
                     <div class="form-group">
                         <label for="tag_color">Tag Color</label>
                         <select id="tag_color" class="form-control" name="tag_color" onchange="toggleInput(this)">
                             <option value="">Choose a tag color</option>
                             {% for color in form.fields.tag_color.choices %}
-                                <option value="{{ color.0 }}">{{ color.1 }}</option>
+                                <!-- Avoid adding "Other" again if it's already added in the form -->
+                                {% if color.0 != "other" %}
+                                    <option value="{{ color.0 }}">{{ color.1 }}</option>
+                                {% endif %}
                             {% endfor %}
-                            <option value="other">Other</option>
+                            <option value="other">Other</option> <!-- Manually add Other option only once -->
                         </select>
-                        <input type="text" name="custom_tag_color" placeholder="Type a new tag color" class="form-control mt-2" id="custom_color_input" style="display:none;" />
+                        <!-- Custom tag color input field, hidden by default -->
+                        {{ form.custom_tag_color }}
                     </div>
+
                     <br>
                     <button type="submit" class="btn btn-primary">Submit</button>
                 </form>
@@ -41,13 +47,13 @@
 
 <script>
     function toggleInput(select) {
-        const customInput = document.getElementById('custom_color_input');
+        const customInput = document.getElementById('id_custom_tag_color');  // Use Django-generated ID
         if (select.value === 'other') {
-            customInput.style.display = 'block';
-            customInput.value = ''; // Clear input
+            customInput.style.display = 'block';  // Show the custom input
+            customInput.value = '';  // Clear any previous value
         } else {
-            customInput.style.display = 'none';
-            customInput.value = select.value; // Set the input to selected value
+            customInput.style.display = 'none';  // Hide the custom input
+            customInput.value = '';  // Clear the custom input field
         }
     }
 </script>

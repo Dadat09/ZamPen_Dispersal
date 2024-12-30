@@ -1,5 +1,5 @@
 from django import forms
-from .models import Livestock, LivestockFamily, FarmLocation, Dispersal
+from .models import Livestock, LivestockFamily, FarmLocation, Dispersal, Message
 from django.db.models import Q 
 from auth_user.models import Grower
 
@@ -26,9 +26,14 @@ class LivestockForm(forms.ModelForm):
         widget=forms.Select(attrs={"class": "form-control"}))
 
     tag_color = forms.ChoiceField(
-        required=False,  # Set to False if you want to allow custom input
-        choices=[],  # Initially set to an empty list
-        widget=forms.Select(attrs={"class": "form-control"})
+        required=False,
+        choices=[],  # Initially set to an empty list, will be populated in __init__
+        widget=forms.Select(attrs={"class": "form-control"}))
+
+    # Add the custom tag color field
+    custom_tag_color = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Type a new tag color", "style": "display:none;"})
     )
 
     class Meta:
@@ -40,7 +45,20 @@ class LivestockForm(forms.ModelForm):
 
         # Fetch unique tag colors from the database
         tag_colors = Livestock.objects.values_list('tag_color', flat=True).distinct()
-        self.fields['tag_color'].choices = [(color, color) for color in tag_colors if color]  # Update choices
+        self.fields['tag_color'].choices = [(color, color) for color in tag_colors if color]
+        self.fields['tag_color'].choices.append(('other', 'Other'))  # Add 'Other' option
+
+    def clean(self):
+        cleaned_data = super().clean()
+        tag_color = cleaned_data.get('tag_color')
+        custom_tag_color = cleaned_data.get('custom_tag_color')
+
+        # If 'Other' is selected, replace tag_color with custom_tag_color
+        if tag_color == 'other' and custom_tag_color:
+            cleaned_data['tag_color'] = custom_tag_color
+        elif tag_color == 'other' and not custom_tag_color:
+            self.add_error('custom_tag_color', "Please provide a custom tag color.")
+        return cleaned_data
 
 class LivestockFamilyForm(forms.ModelForm):
     family_id = forms.CharField(
@@ -174,3 +192,23 @@ class DispersalForm(forms.ModelForm):
 
             # Preselect the families already dispersed to this instance
             self.fields['families_dispersed'].initial = current_families
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ['name', 'email', 'message']
+        widgets = {
+            'message': forms.Textarea(attrs={'rows': 5, 'placeholder': 'Enter your message'}),
+            'name': forms.TextInput(attrs={'placeholder': 'Enter your name'}),
+            'email': forms.EmailInput(attrs={'placeholder': 'Enter your email'}),
+        }
+        labels = {
+            'name': 'Your Name',
+            'email': 'Your Email',
+            'message': 'Your Message',
+        }
+    def __init__(self, *args, **kwargs):
+        super(MessageForm, self).__init__(*args, **kwargs)
+        self.fields['name'].widget.attrs.update({'class': 'w-100'})
+        self.fields['email'].widget.attrs.update({'class': 'w-100'})
+        self.fields['message'].widget.attrs.update({'class': 'w-100'})

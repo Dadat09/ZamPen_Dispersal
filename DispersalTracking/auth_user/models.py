@@ -13,10 +13,15 @@ class Farmer(models.Model):
     Email = models.CharField(max_length=100, blank=True, null=True)
     created_by = models.ForeignKey(User, related_name="+", on_delete=models.CASCADE)
 
+    def __str__(self):
+        if self.Name:
+            return f"{self.Name.first_name} {self.Name.last_name}"
+        return "No Name"
+
 class Grower(models.Model):
     Name = models.ForeignKey(User, related_name="+", blank=True, null=True, on_delete=models.CASCADE)
     ContactNo = models.CharField(max_length=20, blank=True, null=True)
-    Email = models.CharField(max_length=100, blank=True, null=True)
+    Email = models.EmailField(max_length=100, blank=True, null=True)
     barangay = models.CharField(max_length=100, null=True)
     city = models.CharField(max_length=100, null=True)
     province = models.CharField(max_length=100, blank=True, null=True)
@@ -26,3 +31,5 @@ class Grower(models.Model):
 
     def __str__(self):
         return self.Name.get_full_name() if self.Name else "No Name"
+
+ 

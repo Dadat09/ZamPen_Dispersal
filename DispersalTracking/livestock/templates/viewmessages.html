@@ -1,0 +1,120 @@
+{% extends layout %}
+{% load static %}
+{% block content %}
+<body>
+    <div class="container mt-5">
+        <h1>View Messages</h1>
+        <div class="container d-flex" style="justify-content: end; padding: 0;">
+            <div class="col" style="display: flex; justify-content: end;">
+                <form method="get" action="{% url 'messages' %}" class="mb-3 w-100 formhead">
+                    <div class="input-group row gx-2 gy-2">
+                        <div class="col-12 col-md">
+                            <input type="text" name="q" class="form-control" placeholder="Search by content or sender" value="{{ request.GET.q }}">
+                        </div>
+                        <div class="col-12 col-md">
+                            <select name="message_type" class="form-control">
+                                <option value="" {% if not request.GET.message_type %} selected {% endif %}>All Message Types</option>
+                                {% for message_type in unique_message_types %}
+                                <option value="{{ message_type }}" 
+                                {% if request.GET.message_type == message_type %} selected {% endif %}>
+                                    {{ message_type }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <button type="submit" class="btn btn-success w-100">Search</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="?{% if sort_by == 'id' and direction == 'asc' %}sort_by=id&direction=desc{% elif sort_by == 'id' and direction == 'desc' %}sort_by=id&direction=reset{% else %}sort_by=id&direction=asc{% endif %}">
+                                ID
+                                {% if sort_by == 'id' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?{% if sort_by == 'name' and direction == 'asc' %}sort_by=name&direction=desc{% elif sort_by == 'name' and direction == 'desc' %}sort_by=name&direction=reset{% else %}sort_by=name&direction=asc{% endif %}">
+                                Sender
+                                {% if sort_by == 'name' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Content</th>
+                        <th>
+                            <a href="?{% if sort_by == 'message_type' and direction == 'asc' %}sort_by=message_type&direction=desc{% elif sort_by == 'message_type' and direction == 'desc' %}sort_by=message_type&direction=reset{% else %}sort_by=message_type&direction=asc{% endif %}">
+                                Type
+                                {% if sort_by == 'message_type' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?{% if sort_by == 'created_at' and direction == 'asc' %}sort_by=created_at&direction=desc{% elif sort_by == 'created_at' and direction == 'desc' %}sort_by=created_at&direction=reset{% else %}sort_by=created_at&direction=asc{% endif %}">
+                                Date Sent
+                                {% if sort_by == 'created_at' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for message in page_obj %}
+                    <tr>
+                        <td>{{ message.id }}</td> <!-- ID of the message -->
+                        <td>{{ message.name }}</td> <!-- Sender name -->
+                        <td>{{ message.message }}</td> <!-- Message content -->
+                        <td>{{ message.message_type }}</td> <!-- Message type -->
+                        <td>{{ message.created_at|date:"Y-m-d" }}</td> <!-- Date sent -->
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination-wrapper mt-4">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                           <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if num == page_obj.number %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</body>
+<style>
+    .table a{
+        text-decoration: none;
+        color: black;
+    }
+    .table .btn{
+        color: white!important;
+    }
+</style>
+{% endblock %}

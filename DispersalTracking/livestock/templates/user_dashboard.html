@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+<div class="content container mt-5">
+    <h1 class="text-center mb-4" style="font-weight: 700; color: #1B3A2D; text-transform: uppercase; letter-spacing: 2px;">Profile Overview</h1>
+
+    <!-- Profile Header -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-3 text-center">
+                    <img src="{% static 'img/profile-placeholder.png' %}" alt="Profile Picture" class="rounded-circle" style="width: 150px; height: 150px;">
+                </div>
+                <div class="col-md-9">
+                    <h2 style="font-weight: 700; color: #1B3A2D;">{{ user.first_name }} {{ user.last_name }}</h2>
+                    <p style="font-size: 1.2rem; color: #555;">Email: {{ user.email }}</p>
+                    <p style="font-size: 1.2rem; color: #555;">Contact: {{ user.contact_no }}</p>
+                    <p style="font-size: 1.2rem; color: #555;">Address: {{ user.address }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Section -->
+    <div class="row text-center mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h4>Livestock</h4>
+                    <h4 style="font-weight: 700; color: #1B3A2D;">{{ total_livestock_count }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h4>Families</h4>
+                    <h4 style="font-weight: 700; color: #1B3A2D;">{{ families_not_dispersed }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h4>Dispersals</h4>
+                    <h4 style="font-weight: 700; color: #1B3A2D;">{{ dispersed_families }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h4>Farms</h4>
+                    <h4 style="font-weight: 700; color: #1B3A2D;">{{ total_farms_count }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Information Section -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h3 class="card-title" style="font-weight: 600; color: #1B3A2D;">Livestock by Gender</h3>
+                    <canvas id="genderChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h3 class="card-title" style="font-weight: 600; color: #1B3A2D;">Chickens Added by Date</h3>
+                    <canvas id="chickensAddedChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Farms Section -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <h3 class="card-title mb-4" style="font-weight: 600; color: #1B3A2D;">Farms Managed</h3>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover text-center">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Farm Name</th>
+                            <th>Owner</th>
+                            <th>Address</th>
+                            <th>Dispersed Families</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if farms %}
+                            {% for farm in farms %}
+                            <tr>
+                                <td>{{ farm.name }}</td>
+                                <td>{{ farm.grower.Name }}</td>
+                                <td>{{ farm.address }}</td>
+                                <td>
+                                    {% if farm.dispersal_set.all %}
+                                        <ul class="list-unstyled">
+                                            {% for dispersal in farm.dispersal_set.all %}
+                                                <li>
+                                                    <ul class="list-unstyled">
+                                                        {% for family in dispersal.families_dispersed.all %}
+                                                            <li>{{ family }}</li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <span>No dispersals available for this farm.</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center">No farms available</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Gender Chart
+    var genderCtx = document.getElementById('genderChart').getContext('2d');
+    var genderChart = new Chart(genderCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Male', 'Female'],
+            datasets: [{
+                data: [{{ male_count }}, {{ female_count }}],
+                backgroundColor: ['#1ABC9C', '#F1C40F']
+            }]
+        }
+    });
+
+    // Chickens Added Chart
+    var chickensAddedCtx = document.getElementById('chickensAddedChart').getContext('2d');
+    var chickensAddedChart = new Chart(chickensAddedCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ weeks|safe }},
+            datasets: [{
+                label: 'Chickens Added',
+                data: {{ chickens_added|safe }},
+                backgroundColor: '#3498DB'
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

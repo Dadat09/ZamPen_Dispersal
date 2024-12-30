@@ -48,7 +48,7 @@
                         </div>
                     </div>
                     
-                    <!-- Farm Location -->
+                    <!-- Farm Location filtered by selected Grower -->
                     <div class="mb-3">
                         <label for="id_farmlocation" class="form-label">Farm Location</label>
                         {{ form.farmlocation }}
@@ -80,6 +80,36 @@
             }
         }
     }
+
+    // Function to filter farms based on the selected grower
+    document.getElementById('id_grower').addEventListener('change', function() {
+        var growerId = this.value;
+        var farmLocationField = document.getElementById('id_farmlocation');
+        
+        // Clear current options
+        farmLocationField.innerHTML = '';
+        
+        // Fetch the farms for the selected grower
+        fetch('/path/to/fetch/farms/?grower_id=' + growerId)
+            .then(response => response.json())
+            .then(data => {
+                data.farms.forEach(function(farm) {
+                    var option = document.createElement('option');
+                    option.value = farm.id;
+                    option.textContent = farm.name;
+                    farmLocationField.appendChild(option);
+                });
+            });
+    });
+
+    // Automatically trigger filtering of farms on page load if a grower is already selected
+    document.addEventListener('DOMContentLoaded', function() {
+        var growerField = document.getElementById('id_grower');
+        if (growerField.value) {
+            var event = new Event('change');
+            growerField.dispatchEvent(event);
+        }
+    });
 </script>
 
 {% endblock %}

@@ -1,0 +1,133 @@
+{% extends layout %}
+{% block content %}
+<body>
+    <div class="container mt-5">
+        <h1>View Farmers</h1>
+        <div class="container d-flex" style="justify-content: end; padding: 0;">
+            <div class="col" style="display: flex; justify-content: end;">
+                <form method="get" action="{% url 'farmer' %}" class="mb-3 w-100 formhead">
+                    <div class="input-group row gx-2 gy-2">
+                        <div class="col-12 col-md">
+                            <input type="text" name="q" class="form-control" placeholder="Search by name or contact" value="{{ request.GET.q }}">
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <button type="submit" class="btn btn-success w-100">Search</button>
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <a href="{%url 'addfarmer'%}" class="btn btn-success w-100">Add Farmer</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <!-- Add sortable column headers -->
+                        <th>
+                            <a href="?{% if sort_by == 'Name' and direction == 'asc' %}sort_by=Name&direction=desc{% elif sort_by == 'Name' and direction == 'desc' %}sort_by=Name&direction=reset{% else %}sort_by=Name&direction=asc{% endif %}">
+                                Name
+                                {% if sort_by == 'Name' %}
+                                    {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
+                                {% endif %}
+                            </a>
+                        </th>
+                        <th>Contact Number</th>
+                        <th>Email</th>
+                        <th style="text-align: end;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for farmer in page_obj %}
+                    <tr>
+                        <td>
+                            {% if farmer.Name %}
+                                {{ farmer.Name.get_full_name }}
+                            {% else %}
+                                No Name
+                            {% endif %}
+                        </td>
+                        <td>{{ farmer.ContactNo }}</td>
+                        <td>{{ farmer.Email }}</td>
+                        <td style="text-align: end;">
+                            <a href="" class="btn btn-primary btn-sm"><i class="fa-solid fa-pen-to-square"></i></a>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="openDeleteModal({{ farmer.id }})">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to delete this farmer?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form id="deleteForm" method="post" action="">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pagination-wrapper mt-4">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                           <span aria-hidden="true">&laquo;</span>
+                            <span class="sr-only">Previous</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if num == page_obj.number %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                            <span class="sr-only">Next</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</body>
+<script>
+  function openDeleteModal(farmer_id) {
+        const deleteUrl = "{% url 'deletefarmer' pk=0 %}".replace("0", farmer_id);
+        deleteForm.action = deleteUrl;
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        deleteModal.show(); 
+    } 
+</script>
+
+<style>
+    .table a {
+        text-decoration: none;
+        color: black;
+    }
+    .table .btn{
+        color: white!important;
+    }
+</style>
+{% endblock %}

@@ -1,23 +1,25 @@
-{% extends 'base.html' %}
+{% extends layout %}
 {% load static %}
 {% block content %}
 <div class="container mt-5">
     <h1>View Growers</h1>
-    <div class="container d-flex" style="justify-content: end; padding: 0;">
-        <div class="col" style="display: flex; justify-content: end;">
-            <form method="get" action="{% url 'grower' %}" class="mb-3 w-100 formhead">
-                <div class="input-group row gx-2 gy-2">
-                    <div class="col-12 col-md">
-                        <input type="text" name="q" class="form-control" placeholder="Search by Name, Contact, Email, or Location" value="{{ request.GET.q }}">
+    <div class="row mb-3">
+        <div class="container d-flex" style="justify-content: end; padding: 0;">
+            <div class="col" style="display: flex; justify-content: end;">
+                <form method="get" action="{% url 'grower' %}" class="mb-3 w-100 formhead">
+                    <div class="input-group row gx-2 gy-2">
+                        <div class="col-12 col-md">
+                            <input type="text" name="q" class="form-control" placeholder="Search by Name, Contact, Email, or Location" value="{{ request.GET.q }}">
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <button type="submit" class="btn btn-success w-100">Search</button>
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <a href="{% url 'addgrower' %}" class="btn btn-success w-100">Add New Grower</a>
+                        </div>
                     </div>
-                    <div class="col-12 col-md-auto">
-                        <button type="submit" class="btn btn-success w-100">Search</button>
-                    </div>
-                    <div class="col-12 col-md-auto">
-                        <a href="{% url 'addgrower' %}" class="btn btn-success w-100">Add New Grower</a>
-                    </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
     </div>
     <div class="table-responsive">

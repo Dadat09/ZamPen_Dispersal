@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends layout %}
 {% block content %}
 <div class =" container mt-5">
     <h1>View Families</h1>
@@ -12,9 +12,11 @@
                     <div class="col-12 col-md-auto">
                         <button type="submit" class="btn btn-success w-100">Search</button>
                     </div>
+                    {% if request.user.is_staff or request.user.is_grower %}
                     <div class="col-12 col-md-auto">
-                        <a href="{%url 'addfamily'%}" class="btn btn-success w-100">Add New Family</a>
+                        <a href="{% url 'addfamily' %}" class="btn btn-success w-100">Add New Family</a>
                     </div>
+                    {% endif %}
                 </div>
             </form>
         </div>

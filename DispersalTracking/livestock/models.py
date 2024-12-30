@@ -2,6 +2,7 @@ from django.db import models
 from auth_user.models import Grower
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from auth_user.models import User
 
 class FarmLocation(models.Model):
     name = models.CharField(max_length=100)
@@ -65,16 +66,13 @@ class Dispersal(models.Model):
         if self.dispersal_date > timezone.now().date():
             raise ValidationError("Dispersal date cannot be in the future.")
 
-class Messages(models.Model):
-    name = models.CharField(max_length=100, blank=True, null=True)  
-    email = models.EmailField(max_length=254)  
-    subject = models.CharField(max_length=100, blank=True, null=True) 
-    message = models.TextField() 
-    created_at = models.DateTimeField(auto_now_add=True)  
-
-    class Meta:
-        verbose_name_plural = "Messages"  
-        ordering = ['-created_at'] 
+class Message(models.Model):
+    name = models.CharField(max_length=100, blank=False)  # Name with spaces allowed
+    email = models.EmailField()
+    message = models.CharField(max_length=225)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)  # Optional user link
+    message_type = models.CharField(max_length=50, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)  # Timestamp for when the message was created
 
     def __str__(self):
-        return f"Message from {self.name or 'Anonymous'} ({self.email})"
+        return f"Message from {self.name} ({self.email})"
