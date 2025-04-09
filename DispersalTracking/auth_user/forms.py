@@ -54,7 +54,28 @@ class GrowerForm(forms.ModelForm):
         initial='none',
         label='Link a User'
     )
-
+    existing_user = forms.ModelChoiceField(
+        queryset=User.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-control", "style": "display: none;"}),
+        label='Select Existing User'
+    )
+    new_user_first_name = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control", "style": "display: none;"}),
+        required=False,
+        label="New User First Name"
+    )
+    new_user_last_name = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control", "style": "display: none;"}),
+        required=False,
+        label="New User Last Name"
+    )
+    new_user_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"class": "form-control", "style": "display: none;"}),
+        required=False,
+        label="New User Email"
+    )
+    
     ContactNo = forms.CharField(
         widget=forms.TextInput(attrs={"class": "form-control"}),
         required=False
@@ -86,42 +107,34 @@ class GrowerForm(forms.ModelForm):
 
     class Meta:
         model = Grower
-        fields = ['user_choice', 'ContactNo', 'Email', 'barangay', 'city', 'province', 'zipcode', 'notes']
-
-    def __init__(self, *args, **kwargs):
-        self.request = kwargs.pop('request', None)
-        super(GrowerForm, self).__init__(*args, **kwargs)
-        # Add a field to select existing users from the User model
-        self.fields['existing_user'] = forms.ModelChoiceField(
-            queryset=User.objects.all(),  # Query all existing users
-            required=False,
-            widget=forms.Select(attrs={'class': 'form-control'}),
-            label='Select Existing User'
-        )
-        self.fields['existing_user'].widget.attrs['style'] = 'display: none;'  # Hide by default
-
-        # Dynamically add fields for creating a new user if 'other' is selected
-        if self.initial.get('user_choice') == 'other':
-            self.fields['new_user_first_name'] = forms.CharField(
-                widget=forms.TextInput(attrs={"class": "form-control"}),
-                required=False
-            )
-            self.fields['new_user_last_name'] = forms.CharField(
-                widget=forms.TextInput(attrs={"class": "form-control"}),
-                required=False
-            )
-            self.fields['new_user_email'] = forms.EmailField(
-                widget=forms.EmailInput(attrs={"class": "form-control"}),
-                required=False
-            )
+        fields = ['user_choice', 'existing_user', 'new_user_first_name', 'new_user_last_name', 'new_user_email', 
+                  'ContactNo', 'Email', 'barangay', 'city', 'province', 'zipcode', 'notes']
 
     def save(self, commit=True):
         instance = super(GrowerForm, self).save(commit=False)
-        if not instance.created_by_id:
-            if self.request.user.is_authenticated:
-                instance.created_by_id = self.request.user.id
-            else:
-                instance.created_by_id = 1
+
+        user_choice = self.cleaned_data.get('user_choice')
+        existing_user = self.cleaned_data.get('existing_user')
+
+        if user_choice == 'existing' and existing_user:
+            instance.linked_user = existing_user
+            instance.first_name = existing_user.first_name
+            instance.last_name = existing_user.last_name
+            instance.Email = existing_user.email
+        elif user_choice == 'other':
+            new_user = User.objects.create(
+                first_name=self.cleaned_data.get('new_user_first_name'),
+                last_name=self.cleaned_data.get('new_user_last_name'),
+                email=self.cleaned_data.get('new_user_email'),
+                username=self.cleaned_data.get('new_user_email')  # Use email as username
+            )
+            instance.linked_user = new_user
+            instance.first_name = new_user.first_name
+            instance.last_name = new_user.last_name
+            instance.Email = new_user.email
+        else:
+            instance.linked_user = None
+
         if commit:
             instance.save()
         return instance
@@ -152,7 +165,7 @@ class SimpleGrowerForm(forms.ModelForm):
         required=False
     )
     notes = forms.CharField(
-        widget=forms.Textarea(attrs={"class": "form-control", "rows": "4"}),
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 4}),
         required=False
     )
 
@@ -161,18 +174,16 @@ class SimpleGrowerForm(forms.ModelForm):
         fields = ['ContactNo', 'Email', 'barangay', 'city', 'province', 'zipcode', 'notes']
 
     def clean(self):
-        """Ensure that empty fields retain the instance's existing values."""
         cleaned_data = super().clean()
 
-        # Retain existing ContactNo if not provided
         if not cleaned_data.get('ContactNo') and self.instance.pk:
             cleaned_data['ContactNo'] = self.instance.ContactNo
 
-        # Retain existing Email if not provided
         if not cleaned_data.get('Email') and self.instance.pk:
             cleaned_data['Email'] = self.instance.Email
 
         return cleaned_data
+
 
 class FarmerForm(forms.ModelForm):
     ContactNo = forms.CharField(
@@ -221,3 +232,51 @@ class FarmerForm2(forms.ModelForm):
     class Meta:
         model = Farmer
         fields = ['ContactNo', 'Email', 'user_choice', 'existing_user']
+        
+
+class FarmGrowerForm(forms.ModelForm):
+    new_user_first_name = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False,
+        label="First Name"
+    )
+    new_user_last_name = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False,
+        label="Last Name"
+    )
+    new_user_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"class": "form-control"}),
+        required=False,
+        label="Email"
+    )
+    
+    ContactNo = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    barangay = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    city = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    province = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    zipcode = forms.CharField(
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+        required=False
+    )
+    notes = forms.CharField(
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 4}),
+        required=False
+    )
+
+    class Meta:
+        model = Grower
+        fields = [ 'new_user_first_name', 'new_user_last_name', 'new_user_email', 
+                  'ContactNo', 'barangay', 'city', 'province', 'zipcode', 'notes']

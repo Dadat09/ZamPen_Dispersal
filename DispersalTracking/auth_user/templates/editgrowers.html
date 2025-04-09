@@ -61,7 +61,15 @@
                         {{ grower_form.existing_user }}  <!-- Dropdown for selecting an existing user -->
                         {{ grower_form.existing_user.errors }} <!-- Display field errors -->
                     </div>
-
+                    <div class="form-group">
+                        <label for="id_new_user_first_name">First Name</label>
+                        <input type="text" name="new_user_first_name" class="form-control" id="id_new_user_first_name" value="{{ grower_form.new_user_first_name.value|default_if_none:'' }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="id_new_user_last_name">Last Name</label>
+                        <input type="text" name="new_user_last_name" class="form-control" id="id_new_user_last_name" value="{{ grower_form.new_user_last_name.value|default_if_none:'' }}">
+                    </div>                   
                     <div class="form-group">
                         {{ grower_form.ContactNo.label }}
                         {{ grower_form.ContactNo }}  <!-- Grower's contact number -->

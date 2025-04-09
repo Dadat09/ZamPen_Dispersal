@@ -1,20 +1,35 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import TemplateView
 from .models import *
+from .models import SystemSettings
+from django.http import FileResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from auth_user.models import Grower
+import json
+from auth_user.models import Grower, Farmer
+import os
 from .forms import LivestockForm, LivestockFamilyForm, FarmLocationForm, DispersalForm, MessageForm
+from auth_user.forms import FarmGrowerForm
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, F, Prefetch
 from django.contrib import messages
 from django.urls import reverse
 from datetime import timedelta,  datetime
+from django.utils import timezone
 import csv
+from django.utils.timezone import now,  make_aware
 from django.http import HttpResponse
 from .models import FarmLocation, Livestock
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.lib import colors
+from django.utils.timezone import localtime
 from reportlab.pdfgen import canvas
+from collections import defaultdict
 from django.contrib.auth.decorators import login_required
+from .forms import SystemSettingsForm
+import tempfile
+
 def indexView(request):
     title = 'Zampen Chicken Dispersal'
     context = {
@@ -74,15 +89,22 @@ def ViewChickens(request):
     direction = request.GET.get('direction', 'asc')
 
     # Fetch livestock based on user permissions
-    if request.user.is_authenticated:
-        if request.user.is_staff:
-            Livestocks = Livestock.objects.all()
-        else:
+    if request.user.is_superuser:
+        Livestocks = Livestock.objects.all()
+    elif request.user.is_authenticated and request.user.is_grower:
+        Livestocks = Livestock.objects.filter(
+            livestock_family__in=LivestockFamily.objects.filter(grower=request.user)
+        )
+    elif request.user.is_authenticated and request.user.is_farmer:
+        try:
+            farmer = Farmer.objects.get(Name=request.user)
             Livestocks = Livestock.objects.filter(
-                livestock_family__dispersal__grower__Name=request.user
+                livestock_family__in=LivestockFamily.objects.filter(grower=farmer.created_by)
             )
+        except Farmer.DoesNotExist:
+            Livestocks = Livestock.objects.none()
     else:
-        # Handle unauthenticated users gracefully
+        # Handle unauthenticated users or users without grower/farmer role gracefully
         Livestocks = Livestock.objects.none()
 
     # Update the age of each livestock
@@ -261,70 +283,114 @@ def ViewDispersals(request):
     return render(request, 'viewdispersals.html', context)
 
 def addChickens(request):
+    layout = 'admin.html' if request.user.is_staff else 'base.html'
+    tag_colors = Livestock.objects.values_list('tag_color', flat=True).distinct()
+
     if request.method == 'POST':
-        form = LivestockForm(request.POST)
+        form = LivestockForm(request.POST, request.FILES)
+
         if form.is_valid():
             livestock = form.save(commit=False)
-            tag_color = request.POST.get('custom_tag_color') or form.cleaned_data['tag_color']
-            livestock.tag_color = tag_color
-            livestock.date_recorded = timezone.now()
-            livestock.save()
-            return redirect('livestock')
+
+            if livestock:  # Ensure livestock is not None
+                livestock.tag_color = request.POST.get('custom_tag_color') or form.cleaned_data['tag_color']
+                livestock.date_recorded = timezone.now()
+
+                # Save profile picture if provided
+                if 'profile_picture' in request.FILES:
+                    livestock.profile_picture = request.FILES['profile_picture']
+
+                # Check if a new family should be created
+                if 'create_family' in request.POST:
+                    family_id = request.POST.get('family_id')
+                    cage_location = request.POST.get('cage_location')
+                    brood_generation_number = request.POST.get('brood_generation_number', 1)
+
+                    if family_id and cage_location:
+                        new_family, created = LivestockFamily.objects.get_or_create(
+                            family_id=family_id,
+                            defaults={
+                                'cage_location': cage_location,
+                                'date_recorded': timezone.now(),
+                                'brood_generation_number': int(brood_generation_number)
+                            }
+                        )
+                        livestock.livestock_family = new_family
+
+                livestock.save()
+                return redirect('livestock')
+        else:
+            print(f"Form Errors: {form.errors}")  # Debugging line
+
     else:
         form = LivestockForm()
 
-    return render(request, 'addchicken.html', {'form': form})
-
-from django.utils import timezone
+    return render(request, 'addchicken.html', {'form': form,'layout': layout, 'tag_colors': tag_colors})
 
 def addLivestockFamily(request):
+    tag_colors = Livestock.objects.values_list('tag_color', flat=True).distinct()
+
     if request.method == 'POST':
-        form = LivestockFamilyForm(request.POST)
+        form = LivestockFamilyForm(request.POST, request=request)  # Pass request
+        chicken_form = LivestockForm(request.POST, request.FILES)
+
         if form.is_valid():
-            # Save the LivestockFamily instance
-            livestock_family = form.save(commit=True)
-
-            # Set date_recorded to the current date
-            livestock_family.date_recorded = timezone.now().date()
-            livestock_family.save()  # Save again to update the date_recorded
-
-            return redirect('family')  # Redirect to family list or success page
-        else:
-            print(form.errors)  # Print errors to help debug
+            form.save()
+            return redirect('family')
 
     else:
-        form = LivestockFamilyForm()
+        form = LivestockFamilyForm(request=request)  # Pass request
+        chicken_form = LivestockForm()
 
-    return render(request, 'addfamily.html', {'form': form})
+    return render(request, 'addfamily.html', {
+        'form': form,
+        'chicken_form': chicken_form,
+        'tag_colors': tag_colors,
+    })
+
 
 def addFarmLocation(request):
+    layout = 'admin.html' if request.user.is_staff else 'base.html'
     if request.method == 'POST':
+        farmform = FarmGrowerForm(request.POST)
         form = FarmLocationForm(request.POST)
         if form.is_valid():
-            # Save the form, which includes latitude and longitude
             form.save()
             return redirect('farm')  # Change to your actual success URL
     else:
         form = FarmLocationForm()
+        farmform = FarmGrowerForm()  # Initialize farmform for GET requests
 
     # Fetch the growers to populate the dropdown    
     grower_list = Grower.objects.all()
-    return render(request, 'addfarmlocation.html', {'form': form, 'grower_list': grower_list})
+    return render(request, 'addfarmlocation.html', {'layout' : layout, 'form': form, 'farmform': farmform, 'grower_list': grower_list})
 
 def addDispersal(request):
+    layout = 'admin.html' if request.user.is_staff else 'base.html'
     if request.method == "POST":
         form = DispersalForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('dispersal')  # Replace with the correct URL for the dispersal list page
+            messages.success(request, "Dispersal added successfully!")
+            return redirect('dispersal')
     else:
         form = DispersalForm()
-    
-    context = {
+
+    # Fetch Growers and Farms for Dropdowns
+    grower_list = Grower.objects.all()
+    farm_list = FarmLocation.objects.all()
+
+    # Initialize Farm Location Form for Modal
+    farmform = FarmLocationForm()
+
+    return render(request, 'adddispersal.html', {
         'form': form,
-        'title': "Add Dispersal"
-    }
-    return render(request, 'adddispersal.html', context)
+        'grower_list': grower_list,
+        'farm_list': farm_list,
+        'farmform': farmform,
+        'layout' : layout,
+        'title' : "Add Dispersal"
+    })
 
 def fetch_farms(request):
     grower_id = request.GET.get('grower_id')
@@ -342,55 +408,78 @@ def fetch_farms(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 def editLivestock(request, pk):
+    layout = 'admin.html' if request.user.is_staff else 'base.html'
     livestock = get_object_or_404(Livestock, pk=pk)
 
     if request.method == 'POST':
-        form = LivestockForm(request.POST, instance=livestock)
+        form = LivestockForm(request.POST, request.FILES, instance=livestock)  # Include request.FILES
+
         if form.is_valid():
+            # If a new image is uploaded, it replaces the old one
+            if 'profile_picture' in request.FILES:
+                livestock.profile_picture = request.FILES['profile_picture']
+
             form.save()
-            return redirect('livestock')  # Redirect to a livestock list page
+            return redirect('livestock')  # Redirect after saving
+
     else:
         form = LivestockForm(instance=livestock)
 
-    return render(request, 'editchicken.html', {'form': form, 'livestock': livestock})
+    return render(request, 'editchicken.html', {'form': form, 'layout':layout, 'livestock': livestock})
 
 def editLivestockFamily(request, pk):
     livestock_family = get_object_or_404(LivestockFamily, pk=pk)
+    tag_colors = Livestock.objects.values_list('tag_color', flat=True).distinct()
 
     if request.method == 'POST':
-        form = LivestockFamilyForm(request.POST, instance=livestock_family)
+        form = LivestockFamilyForm(request.POST, instance=livestock_family, request=request)
+        chicken_form = LivestockForm(request.POST, request.FILES)
+
         if form.is_valid():
-            # Update the LivestockFamily instance
-            livestock_family = form.save(commit=False)
-
-            # Automatically update the date_recorded field to the current date
-            livestock_family.date_recorded = timezone.now().date()
-            livestock_family.save()  # Save changes
-
-            return redirect('family')  # Redirect to the family list or detail page
-        else:
-            print(form.errors)  # Print errors to help debug
+            form.save()
+            messages.success(request, "Family updated successfully!")
+            return redirect('family')  # Redirect to the family list instead of reloading edit
 
     else:
-        form = LivestockFamilyForm(instance=livestock_family)
+        form = LivestockFamilyForm(instance=livestock_family, request=request)
+        chicken_form = LivestockForm()
 
-    return render(request, 'editfamily.html', {'form': form, 'livestock_family': livestock_family})
+    return render(request, 'editfamily.html', {
+        'form': form,
+        'chicken_form': chicken_form,
+        'tag_colors': tag_colors,
+        'livestock_family': livestock_family
+    })
 
 def editFarmLocation(request, pk):
+    layout = 'admin.html' if request.user.is_staff else 'base.html'
     farm_location = get_object_or_404(FarmLocation, pk=pk)
 
     if request.method == 'POST':
         form = FarmLocationForm(request.POST, instance=farm_location)
         if form.is_valid():
-            # Save the updated FarmLocation instance
             form.save()
-            return redirect('farm')  # Redirect to the farm list page after saving
+            messages.success(request, "Farm location updated successfully!")
+            return redirect('farm')  # Redirect to the farm list page
     else:
         form = FarmLocationForm(instance=farm_location)
 
-    return render(request, 'editfarmlocation.html', {'form': form, 'farm_location': farm_location})
+    # Fetch all growers for the dropdown
+    grower_list = Grower.objects.all()
+    
+    # Initialize the grower form for the "Add Grower" modal
+    farmform = FarmGrowerForm()
+
+    return render(request, 'editfarmlocation.html', {
+        'form': form, 
+        'farm_location': farm_location, 
+        'grower_list': grower_list,
+        'farmform': farmform,  # Pass grower form to template
+        'layout' : layout
+    })
 
 def editDispersal(request, pk):
+    layout = 'admin.html' if request.user.is_staff else 'base.html'
     dispersal = get_object_or_404(Dispersal, pk=pk)  # Get the specific dispersal record
     
     if request.method == "POST":
@@ -400,12 +489,24 @@ def editDispersal(request, pk):
             return redirect('dispersal')  # Redirect to the appropriate list or detail page
     else:
         form = DispersalForm(instance=dispersal)  # Pass the instance when editing
-    
+
+    # Fetch Growers and Farms for Dropdowns
+    grower_list = Grower.objects.all()
+    farm_list = FarmLocation.objects.all()
+
+    # Initialize Farm Location Form for Modal
+    farmform = FarmLocationForm()
+
     context = {
         'form': form,
-        'title': "Edit Dispersal"
+        'title': "Edit Dispersal",
+        'grower_list': grower_list,
+        'farm_list': farm_list,
+        'farmform': farmform,
+        'layout' : layout
     }
     return render(request, 'editdispersal.html', context)
+
 
 def deleteLivestock(request, pk):
     # Fetch the livestock entry by primary key
@@ -442,92 +543,108 @@ def deleteDispersal(request, pk):
         return redirect('dispersal')
     return render(request, 'dispersal_confirm_delete.html', {'dispersal': dispersal})
 
-
-from datetime import timedelta, datetime
-
+@login_required
 def dashboardView(request):
-    # Count families not dispersed
-    families_not_dispersed_count = LivestockFamily.objects.annotate(
-        dispersal_count=Count('dispersal')
-    ).filter(dispersal_count=0).count()
+    tag_colors = Livestock.objects.values_list('tag_color', flat=True).distinct()
+    livestock_form = LivestockForm()
+    family_form = LivestockFamilyForm()
+    total_growers = Grower.objects.count()
+    year = request.GET.get('year', None) or str(now().year)
+    grower_id = request.GET.get('grower_id', 'all')
 
-    # Count dispersed families
-    dispersed_families_count = Dispersal.objects.count()
+    # Base livestock query (without filtering by grower yet)
+    livestock = Livestock.objects.filter(date_recorded__year=year)
 
-    # Count male and female livestock
-    male_count = Livestock.objects.filter(gender='Male').count()
-    female_count = Livestock.objects.filter(gender='Female').count()
+    dispersals = Dispersal.objects.filter(dispersal_date__year=year)
 
-    # Calculate total livestock count
+    # **Correct Grower Filtering**
+    if grower_id != "all":
+        try:
+            grower_id = int(grower_id)  # Convert grower_id to integer
+            relevant_families = LivestockFamily.objects.filter(
+                dispersal__in=Dispersal.objects.filter(
+                    farmlocation__grower_id=grower_id
+        )
+        ).values_list("family_id", flat=True)  # ✅ Use "family_id"
+
+            # Filter livestock by families connected to the selected grower
+            livestock = livestock.filter(livestock_family_id__in=relevant_families)
+
+        except ValueError:
+            return JsonResponse({'error': 'Invalid grower_id'}, status=400)
+
+    # **Count Dispersed vs. Not Dispersed Families**
+    families_not_dispersed_count = LivestockFamily.objects.filter(dispersal=None).count()
+    dispersed_families_count = LivestockFamily.objects.filter(dispersal__isnull=False).distinct().count()   
+
+    # **Livestock Gender Breakdown**
+    male_count = livestock.filter(gender='Male').count()
+    female_count = livestock.filter(gender='Female').count()
     total_livestock_count = male_count + female_count
-
-    # Count total farms
     total_farms_count = FarmLocation.objects.count()
 
-    # Query to count chickens added per day
+    # **Age Distribution**
+    age_distribution = defaultdict(int)
+    for animal in livestock:
+        age = animal.age_in_days
+        if age <= 30:
+            age_distribution["0-30 days"] += 1
+        elif age <= 60:
+            age_distribution["31-60 days"] += 1
+        elif age <= 90:
+            age_distribution["61-90 days"] += 1
+        else:
+            age_distribution["90+ days"] += 1
+
+    # **Chickens Added Per Day**
     chickens_added_per_day = (
-        Livestock.objects
+        livestock
         .values('date_recorded')
         .annotate(count=Count('id'))
         .order_by('date_recorded')
     )
 
-    # Prepare data for the chart
-    weeks = []
-    chickens_added = []
+    dates = [entry["date_recorded"].strftime('%Y-%m-%d') for entry in chickens_added_per_day]
+    chickens_added = [entry["count"] for entry in chickens_added_per_day]
 
-    for entry in chickens_added_per_day:
-        weeks.append(entry['date_recorded'])
-        chickens_added.append(entry['count'])
+    growers = Grower.objects.all()
 
-    # Check if there are any records
-    if weeks:
-        # Fill missing dates with zero counts
-        start_date = weeks[0]
-        end_date = weeks[-1]
-        all_dates = []
+    # **Return JSON if AJAX Request**
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'total_growers': total_growers,
+            'families_not_dispersed': families_not_dispersed_count,
+            'dispersed_families': dispersed_families_count,
+            'male_count': male_count,
+            'female_count': female_count,
+            'total_livestock_count': total_livestock_count,
+            'total_farms_count': total_farms_count,
+            'age_labels': list(age_distribution.keys()),
+            'age_counts': list(age_distribution.values()),
+            'dates': dates,
+            'chickens_added': chickens_added,
+        })
 
-        current_date = start_date
-        while current_date <= end_date:
-            all_dates.append(current_date)
-            current_date += timedelta(days=1)
-
-        chickens_added_full = []
-        week_set = set(weeks)
-        for date in all_dates:
-            if date in week_set:
-                chickens_added_full.append(chickens_added[weeks.index(date)])
-            else:
-                chickens_added_full.append(0)
-
-        weeks = all_dates
-        chickens_added = chickens_added_full
-
-    # Convert dates to strings for the frontend chart
-    weeks = [date.strftime('%Y-%m-%d') for date in weeks]
-
-    # Get all farms with their owners and addresses, and related dispersals and families dispersed
-    farms = FarmLocation.objects.prefetch_related(
-        'dispersal_set__families_dispersed'
-    ).select_related('grower').all()
-
-    # Prepare the context for the template
+    # **Context for Django Template Rendering**
     context = {
+        "livestock_form": livestock_form,
+        "family_form": family_form,
+        'total_growers': total_growers,
         'families_not_dispersed': families_not_dispersed_count,
         'dispersed_families': dispersed_families_count,
         'male_count': male_count,
         'female_count': female_count,
         'total_livestock_count': total_livestock_count,
         'total_farms_count': total_farms_count,
-        'farms': farms,
-        'weeks': weeks,  # Pass the formatted date strings to the template
-        'chickens_added': chickens_added,  # Pass chicken counts to the template
-        'title': "Dashboard"
+        'age_labels': list(age_distribution.keys()),
+        'age_counts': list(age_distribution.values()),
+        'growers': growers,
+        'available_years': list(range(now().year - 5, now().year + 1)),
+        'title': "Dashboard",
+        'tag_colors' : tag_colors
     }
 
-    return render(request, 'dashboard.html', context)
-
-
+    return render(request, "dashboard.html", context)
 
 
 def farm_list(request):
@@ -754,3 +871,202 @@ def user_dashboard_view(request):
     }
 
     return render(request, 'user_dashboard.html', context)
+
+def addChicken(request):
+    tag_colors = Livestock.objects.values_list('tag_color', flat=True).distinct()
+
+    if request.method == 'POST':
+        form = LivestockForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            new_chicken = form.save(commit=False)
+            new_chicken.date_recorded = timezone.now()
+
+            # Ensure tag color is set correctly
+            if new_chicken.tag_color == 'other' and form.cleaned_data.get('custom_tag_color'):
+                new_chicken.tag_color = form.cleaned_data['custom_tag_color']
+
+            new_chicken.save()
+            messages.success(request, "Chicken added successfully!")
+
+            return redirect(request.META.get('HTTP_REFERER', 'addfamily'))  # Retain form data
+
+        else:
+            messages.error(request, f"Failed to add chicken: {form.errors}")
+
+    return redirect(request.META.get('HTTP_REFERER', 'addfamily'))
+
+def save_farm_location(request):
+    if request.method == "POST":
+        form = FarmLocationForm(request.POST)
+        if form.is_valid():
+            farm = form.save()
+            return JsonResponse({"success": True, "farm": {"id": farm.id, "name": farm.name}})
+        else:
+            return JsonResponse({"success": False, "errors": form.errors})
+    return JsonResponse({"success": False, "message": "Invalid request."})
+
+@csrf_exempt
+def update_settings(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            settings = SystemSettings.get_settings()
+            settings.max_roosters = int(data["max_roosters"])
+            settings.max_hens = int(data["max_hens"])
+            settings.save()
+
+            return JsonResponse({"success": True})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+
+    return JsonResponse({"success": False, "error": "Invalid request"})
+
+@login_required
+def settingsView(request):
+    settings = SystemSettings.get_settings()
+
+    if request.method == "POST":
+        form = SystemSettingsForm(request.POST, instance=settings)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Settings updated successfully!")
+            return redirect('dashboard')  # Redirect to dashboard
+    else:
+        form = SystemSettingsForm(instance=settings)
+
+    return render(request, "settings.html", {"form": form})
+@csrf_exempt
+
+def update_settings(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            settings = SystemSettings.get_settings()
+            settings.max_roosters = int(data["max_roosters"])
+            settings.max_hens = int(data["max_hens"])
+            settings.save()
+
+            return JsonResponse({"success": True})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+
+    return JsonResponse({"success": False, "error": "Invalid request"})
+
+def get_settings(request):
+    settings = SystemSettings.get_settings()
+    return JsonResponse({
+        "success": True,
+        "max_roosters": settings.max_roosters,
+        "max_hens": settings.max_hens
+    })
+ 
+@csrf_exempt    
+def add_chicken(request):
+    if request.method == "POST":
+        form = LivestockForm(request.POST, request.FILES)
+        if form.is_valid():
+            new_chicken = form.save(commit=False)
+
+            # Handle custom tag color
+            if new_chicken.tag_color == "other" and "custom_tag_color" in request.POST:
+                new_chicken.tag_color = request.POST["custom_tag_color"]
+
+            new_chicken.save()
+            return JsonResponse({"success": True})  # ✅ Always return valid JSON
+        
+        return JsonResponse({"success": False, "error": form.errors.as_json()}, status=400)
+    
+    return JsonResponse({"success": False, "error": "Invalid request"}, status=400)
+
+@csrf_exempt
+def add_family(request):
+    if request.method == "POST":
+        form = LivestockFamilyForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return JsonResponse({"success": True})  # ✅ Always return JSON
+        
+        return JsonResponse({"success": False, "error": form.errors.as_json()}, status=400)
+    
+    return JsonResponse({"success": False, "error": "Invalid request"}, status=400)
+
+
+def family_detail_view(request, family_id):
+    family = get_object_or_404(LivestockFamily, pk=family_id)
+
+    # Check if family is dispersed
+    dispersal = Dispersal.objects.filter(families_dispersed=family).first()
+    is_dispersed = dispersal is not None
+
+    # Get farm location and grower if dispersed
+    farm_location = dispersal.farmlocation if is_dispersed else None
+    grower = farm_location.grower if is_dispersed else None
+
+    # Get all chickens in this family
+    roosters = Livestock.objects.filter(livestock_family=family, gender="Male")
+    hens = Livestock.objects.filter(livestock_family=family, gender="Female")
+
+    context = {
+        "family": family,
+        "is_dispersed": is_dispersed,
+        "farm_location": farm_location,
+        "grower": grower,
+        "roosters": roosters,
+        "hens": hens,
+    }
+
+    return render(request, "familydetail.html", context)
+
+def generate_family_pdf(file_path):
+    # Query Livestock Families
+    families = LivestockFamily.objects.all()
+    
+    data = [["Family Name", "Location", "Grower", "Dispersed", "Dispersal Date", "Livestocks"]]
+    
+    for family in families:
+        dispersal = Dispersal.objects.filter(families_dispersed=family).first()
+        location = dispersal.farmlocation.name if dispersal else "N/A"
+        grower = dispersal.farmlocation.grower if dispersal else "N/A"
+        dispersed = "Yes" if dispersal else "No"
+        dispersal_date = (
+                            localtime(make_aware(datetime.combine(dispersal.dispersal_date, datetime.min.time()))).strftime('%Y-%m-%d') 
+                            if dispersal and dispersal.dispersal_date 
+                            else "N/A"
+                        )
+        livestock_list = ", ".join(Livestock.objects.filter(livestock_family=family).values_list("ls_code", flat=True))
+        
+        data.append([family.family_id, location, str(grower), dispersed, dispersal_date, livestock_list])
+    
+    # Create PDF
+    doc = SimpleDocTemplate(file_path, pagesize=letter)
+    table = Table(data)
+    
+    # Style Table
+    style = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+    ])
+    table.setStyle(style)
+    
+    doc.build([table])
+    return file_path
+
+def download_family_pdf(request):
+    # Use a safer temporary directory
+    temp_dir = tempfile.gettempdir()
+    file_path = os.path.join(temp_dir, f"livestock_families_{now().strftime('%Y%m%d%H%M%S')}.pdf")
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    # Generate the PDF
+    generate_family_pdf(file_path)
+
+    # Serve the PDF
+    return FileResponse(open(file_path, 'rb'), content_type='application/pdf', as_attachment=True, filename="livestock_families.pdf")

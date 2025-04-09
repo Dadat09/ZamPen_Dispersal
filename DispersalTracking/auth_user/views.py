@@ -5,14 +5,12 @@ from django.contrib import messages
 from .models import Grower, User, Farmer
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.utils.text import slugify
-from .forms import GrowerForm, UserForm, FarmerForm, SimpleGrowerForm, FarmerForm2
+from .forms import GrowerForm, UserForm, FarmerForm, SimpleGrowerForm, FarmerForm2, FarmGrowerForm
 import uuid
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.utils.text import slugify
-
-
+from django.http import JsonResponse
 
 def ViewGrowers(request):
     if request.user.is_staff:
@@ -24,13 +22,13 @@ def ViewGrowers(request):
     sort_by = request.GET.get('sort_by', 'id')
     direction = request.GET.get('direction', 'asc')
 
-    growers = Grower.objects.select_related('Name')
+    growers = Grower.objects.select_related('linked_user')
     
     if query:
         growers = growers.filter(
-            Q(Name__username__icontains=query) |
-            Q(Name__first_name__icontains=query) |
-            Q(Name__last_name__icontains=query) |
+            Q(linked_user__username__icontains=query) |
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query) |
             Q(ContactNo__icontains=query) |
             Q(Email__icontains=query) |
             Q(barangay__icontains=query) |
@@ -67,7 +65,7 @@ def AddGrowers(request):
 
     try:
         if request.method == 'POST':
-            grower_form = GrowerForm(request.POST, request=request)
+            grower_form = GrowerForm(request.POST)  # Removed request=request
             user_form = UserForm(request.POST, request.FILES)
 
             if grower_form.is_valid():
@@ -78,11 +76,12 @@ def AddGrowers(request):
                         user = user_form.save(commit=False)
                         user.username = user_form.cleaned_data['user_name']
                         user.set_password(user_form.cleaned_data['password'])
-                        user.is_grower = True  # Set is_grower to True for a new grower
+                        user.is_grower = True
                         user.save()
 
                         grower = grower_form.save(commit=False)
-                        grower.Name = user
+                        grower.linked_user = user
+                        grower.created_by = request.user  # Automate setting created_by
                         grower.save()
 
                         messages.success(request, 'Grower and new user created successfully!')
@@ -92,11 +91,12 @@ def AddGrowers(request):
                     existing_user_id = request.POST.get('existing_user')
                     if existing_user_id:
                         existing_user = User.objects.get(id=existing_user_id)
-                        existing_user.is_grower = True  # Set is_grower to True for the existing user
+                        existing_user.is_grower = True
                         existing_user.save()
 
                         grower = grower_form.save(commit=False)
-                        grower.Name = existing_user
+                        grower.linked_user = existing_user
+                        grower.created_by = request.user  # Automate setting created_by
                         grower.save()
 
                         messages.success(request, 'Grower linked to existing user!')
@@ -104,7 +104,8 @@ def AddGrowers(request):
 
                 else:
                     grower = grower_form.save(commit=False)
-                    grower.Name = None
+                    grower.linked_user = None
+                    grower.created_by = request.user  # Automate setting created_by
                     grower.save()
 
                     messages.success(request, 'Grower created without linking a user.')
@@ -113,7 +114,7 @@ def AddGrowers(request):
     except Exception as e:
         print("An error occurred:", str(e))
 
-    grower_form = GrowerForm(request=request)
+    grower_form = GrowerForm()  # Removed request=request
     user_form = UserForm()
 
     return render(request, 'addgrowers.html', {
@@ -122,60 +123,56 @@ def AddGrowers(request):
         'layout': layout
     })
 
-
-
 def editGrower(request, pk):
-    if request.user.is_staff:
-        layout = 'admin.html'
-    else:
-        layout = 'base.html'
-
     grower = get_object_or_404(Grower, pk=pk)
+    layout = 'admin.html' if request.user.is_staff else 'base.html'
 
     if request.method == 'POST':
-        grower_form = GrowerForm(request.POST, request=request, instance=grower)
-        user_form = UserForm(request.POST, request.FILES)
+        grower_form = GrowerForm(request.POST, instance=grower)
+        user_choice = request.POST.get('user_choice')
 
         if grower_form.is_valid():
-            user_choice = grower_form.cleaned_data.get('user_choice')
-
+            grower = grower_form.save(commit=False)
+            grower.first_name = grower_form.cleaned_data.get('new_user_first_name', grower.first_name)
+            grower.last_name = grower_form.cleaned_data.get('new_user_last_name', grower.last_name)
+            grower.ContactNo = grower_form.cleaned_data['ContactNo']
+            grower.Email = grower_form.cleaned_data['Email']
+            grower.barangay = grower_form.cleaned_data['barangay']
+            grower.city = grower_form.cleaned_data['city']
+            grower.province = grower_form.cleaned_data['province']
+            grower.zipcode = grower_form.cleaned_data['zipcode']
+            grower.notes = grower_form.cleaned_data['notes']
+            
             if user_choice == 'other':
+                user_form = UserForm(request.POST, request.FILES)
                 if user_form.is_valid():
                     user = user_form.save(commit=False)
                     user.username = user_form.cleaned_data['user_name']
                     user.set_password(user_form.cleaned_data['password'])
                     user.save()
-
-                    grower = grower_form.save(commit=False)
-                    grower.Name = user
-                    grower.save()
-
-                    messages.success(request, 'Grower and new user updated successfully!')
-                    return redirect('grower')
-
+                    grower.linked_user = user
             elif user_choice == 'existing':
                 existing_user_id = request.POST.get('existing_user')
                 if existing_user_id:
-                    existing_user = User.objects.get(id=existing_user_id)
-                    grower.Name = existing_user
-                    grower.save()
-
-                    messages.success(request, 'Grower linked to existing user!')
-                    return redirect('grower')
-
+                    grower.linked_user = User.objects.get(id=existing_user_id)
             else:
-                grower.Name = None
-                grower.save()
+                grower.linked_user = None
 
-                messages.success(request, 'Grower updated without linking a user.')
-                return redirect('grower')
+            grower.save()
+            messages.success(request, 'Grower updated successfully!')
+            return redirect('grower')
 
-    grower_form = GrowerForm(instance=grower, request=request)
-    user_form = UserForm()
+    else:
+        # Determine the correct initial user choice
+        initial_user_choice = 'none'
+        if grower.linked_user:
+            initial_user_choice = 'existing'
+
+        # Populate the form with the initial user choice
+        grower_form = GrowerForm(instance=grower, initial={'user_choice': initial_user_choice, 'existing_user': grower.linked_user})
 
     return render(request, 'editgrowers.html', {
         'grower_form': grower_form,
-        'user_form': user_form,
         'layout': layout
     })
 
@@ -231,10 +228,7 @@ def userView(request):
 
 
 def AddUser(request):
-    if request.user.is_staff:
-        layout = 'admin.html'
-    else:
-        layout = 'base.html'
+    layout = 'admin.html' if request.user.is_staff else 'base.html'
 
     if request.method == 'POST':
         user_form = UserForm(request.POST, request.FILES)
@@ -245,21 +239,20 @@ def AddUser(request):
         if user_form.is_valid():
             user_instance = user_form.save(commit=False)
 
-            # Set a unique username if it's not provided
+            # Generate unique username if not provided
             if not user_instance.username:
-                base_username = slugify(user_instance.first_name + user_instance.last_name)  # Human-readable username
-                # Ensure the username is unique
+                base_username = slugify(user_instance.first_name + user_instance.last_name)
                 counter = 1
                 while User.objects.filter(username=base_username).exists():
                     base_username = f"{slugify(user_instance.first_name + user_instance.last_name)}{counter}"
                     counter += 1
                 user_instance.username = base_username
 
-            # Validate and encrypt the password
-            password = request.POST.get('password')  # Ensure your form collects the password field
+            # Validate and encrypt password
+            password = request.POST.get('password')
             try:
-                validate_password(password, user_instance)  # Validate password against validators
-                user_instance.set_password(password)       # Encrypt the password
+                validate_password(password, user_instance)
+                user_instance.set_password(password)
             except ValidationError as e:
                 messages.error(request, f"Password error: {', '.join(e.messages)}")
                 return render(request, 'adduser.html', {
@@ -269,39 +262,41 @@ def AddUser(request):
                     'layout': layout,
                 })
 
-            # Set user type based on the selection
-            if user_type == 'grower':
-                user_instance.is_grower = True
-                user_instance.is_farmer = False
-            elif user_type == 'farmer':
-                user_instance.is_farmer = True
-                user_instance.is_grower = False
-
-            # Save user instance
+            # Set user type
+            user_instance.is_grower = user_type == 'grower'
+            user_instance.is_farmer = user_type == 'farmer'
             user_instance.save()
+
+            # Retrieve contact number
+            contact_no = request.POST.get('contact_number', '')
 
             # Handle Grower creation
             if user_type == 'grower' and grower_form.is_valid():
                 grower = grower_form.save(commit=False)
+                grower.linked_user = user_instance
+                grower.first_name = user_instance.first_name
+                grower.last_name = user_instance.last_name
+                grower.ContactNo = contact_no
+                grower.Email = user_instance.email
                 grower.created_by = request.user
-                grower.Name = user_instance  # Link grower to user
                 grower.save()
                 messages.success(request, 'Grower added successfully!')
-            elif user_type == 'grower' and not grower_form.is_valid():
+            elif user_type == 'grower':
                 messages.error(request, 'Grower form is invalid.')
 
             # Handle Farmer creation
-            elif user_type == 'farmer' and farmer_form.is_valid():
+            if user_type == 'farmer' and farmer_form.is_valid():
                 farmer = farmer_form.save(commit=False)
+                farmer.Name = user_instance
+                farmer.ContactNo = contact_no
+                farmer.Email = user_instance.email
                 farmer.created_by = request.user
-                farmer.Name = user_instance  # Link farmer to user
                 farmer.save()
                 messages.success(request, 'Farmer added successfully!')
-            elif user_type == 'farmer' and not farmer_form.is_valid():
+            elif user_type == 'farmer':
                 messages.error(request, 'Farmer form is invalid.')
 
             return redirect('user')
-
         else:
             messages.error(request, 'User form is invalid.')
 
@@ -323,15 +318,18 @@ def EditUser(request, pk):
     user_instance = get_object_or_404(User, pk=pk)
     layout = 'admin.html' if request.user.is_staff else 'base.html'
 
-    grower_instance = Grower.objects.filter(Name=user_instance).first()
+    # Get existing grower or farmer instance
+    grower_instance = Grower.objects.filter(linked_user=user_instance).first()
     farmer_instance = Farmer.objects.filter(Name=user_instance).first()
-
+    
+    # Determine current user type
     user_type = 'grower' if grower_instance else 'farmer' if farmer_instance else None
 
     if request.method == 'POST':
         user_form = UserForm(request.POST, request.FILES, instance=user_instance)
-        user_type = request.POST.get('user_type')  # Determine user type from form submission
+        user_type = request.POST.get('user_type')
 
+        # Select appropriate form based on user type
         grower_form = SimpleGrowerForm(request.POST, instance=grower_instance) if user_type == 'grower' else None
         farmer_form = FarmerForm(request.POST, instance=farmer_instance) if user_type == 'farmer' else None
 
@@ -341,21 +339,39 @@ def EditUser(request, pk):
             user_instance.is_farmer = user_type == 'farmer'
             user_instance.save()
 
-            if user_type == 'grower' and grower_form and grower_form.is_valid():
-                grower_form.save()
-                if farmer_instance:  # Remove farmer data if switching to grower
+            if user_type == 'grower':
+                # Create or update Grower instance
+                if grower_form and grower_form.is_valid():
+                    grower = grower_form.save(commit=False)
+                    grower.linked_user = user_instance
+                    grower.first_name = user_instance.first_name
+                    grower.last_name = user_instance.last_name
+                    grower.Email = user_instance.email
+                    grower.save()
+                
+                # Remove Farmer instance if switching from farmer to grower
+                if farmer_instance:
                     farmer_instance.delete()
+
                 messages.success(request, 'Grower updated successfully!')
-            elif user_type == 'farmer' and farmer_form and farmer_form.is_valid():
-                farmer_form.save()
-                if grower_instance:  # Remove grower data if switching to farmer
+
+            elif user_type == 'farmer':
+                # Create or update Farmer instance
+                if farmer_form and farmer_form.is_valid():
+                    farmer = farmer_form.save(commit=False)
+                    farmer.Name = user_instance
+                    farmer.Email = user_instance.email
+                    farmer.save()
+
+                # Remove Grower instance if switching from grower to farmer
+                if grower_instance:
                     grower_instance.delete()
+
                 messages.success(request, 'Farmer updated successfully!')
 
             return redirect('user')
 
     else:
-        # Initialize forms for GET request
         user_form = UserForm(instance=user_instance)
         grower_form = SimpleGrowerForm(instance=grower_instance) if grower_instance else SimpleGrowerForm()
         farmer_form = FarmerForm(instance=farmer_instance) if farmer_instance else FarmerForm()
@@ -428,14 +444,33 @@ def AddFarmer(request):
     layout = 'admin.html' if request.user.is_staff else 'base.html'
 
     try:
+        user_instance = None  # ✅ Ensure user_instance is initialized
+
         if request.method == 'POST':
             farmer_form = FarmerForm2(request.POST)
-            user_form = UserForm(request.POST, request.FILES)
+
+            # Check if the user is updating an existing user
+            user_choice = request.POST.get('user_choice')
+            if user_choice == 'existing':
+                existing_user_id = request.POST.get('existing_user')
+                user_instance = User.objects.get(id=existing_user_id) if existing_user_id else None
+            else:
+                user_instance = User()
+
+            existing_password = user_instance.password if user_instance else None
+            user_form = UserForm(request.POST, request.FILES, instance=user_instance)
+
+            if user_form.is_valid():
+                user_instance = user_form.save(commit=False)
+                if not request.POST.get('password') and existing_password:
+                    user_instance.password = existing_password  # Retain old password
+                user_instance.is_grower = request.POST.get('user_type') == 'grower'
+                user_instance.is_farmer = request.POST.get('user_type') == 'farmer'
+                user_instance.save()
 
             if farmer_form.is_valid():
                 user_choice = farmer_form.cleaned_data.get('user_choice')
 
-                # Creating a new user if user_choice is 'other'
                 if user_choice == 'other' and user_form.is_valid():
                     user = user_form.save(commit=False)
                     user.username = user_form.cleaned_data['user_name']
@@ -450,23 +485,21 @@ def AddFarmer(request):
                     messages.success(request, 'Farmer and new user created successfully!')
                     return redirect('farmer')
 
-                # Linking to an existing user if user_choice is 'existing'
                 elif user_choice == 'existing':
                     existing_user_id = farmer_form.cleaned_data.get('existing_user')
                     if existing_user_id:
                         farmer = farmer_form.save(commit=False)
                         farmer.Name = existing_user_id
-                        farmer.created_by = request.user  # Assign the current user to created_by
+                        farmer.created_by = request.user
                         farmer.save()
 
                         messages.success(request, 'Farmer linked to existing user!')
                         return redirect('farmer')
 
-                # Creating a Farmer without linking to a user
                 else:
                     farmer = farmer_form.save(commit=False)
                     farmer.Name = None
-                    farmer.created_by = request.user  # Assign the current user to created_by
+                    farmer.created_by = request.user
                     farmer.save()
 
                     messages.success(request, 'Farmer created without linking a user.')
@@ -475,7 +508,6 @@ def AddFarmer(request):
     except Exception as e:
         print("An error occurred:", str(e))
 
-    # Initialize forms without 'request' argument
     farmer_form = FarmerForm2()
     user_form = UserForm()
 
@@ -484,6 +516,7 @@ def AddFarmer(request):
         'user_form': user_form,
         'layout': layout
     })
+
 def Deletefarmer(request, pk):
     if request.user.is_staff:
         layout = 'admin.html'
@@ -516,3 +549,39 @@ def custom_login_view(request):
 def logout_view(request):
     logout(request)
     return redirect('index')
+
+def save_farm_grower(request):
+    if request.method == "POST":
+        form = FarmGrowerForm(request.POST)
+        if form.is_valid():
+            grower = form.save(commit=False)  # ✅ Create instance before assigning attributes
+
+            # Assign correct field names
+            grower.first_name = form.cleaned_data['new_user_first_name']
+            grower.last_name = form.cleaned_data['new_user_last_name']
+            grower.Email = form.cleaned_data['new_user_email']
+
+            if request.user.is_authenticated:
+                grower.created_by = request.user  # Assign the currently logged-in user
+
+            grower.save()
+
+            # ✅ Return JSON response for AJAX requests
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    "success": True,
+                    "message": "Grower saved successfully!",
+                    "grower": {"id": grower.id, "name": f"{grower.first_name} {grower.last_name}"}
+                })
+
+            messages.success(request, "Grower information saved successfully!")
+
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({"success": False, "errors": form.errors})
+
+            messages.error(request, "There was an error saving the form. Please check the inputs.")
+
+        return redirect(request.META.get('HTTP_REFERER', 'default_redirect_url'))  # Redirect for non-AJAX requests
+
+    return JsonResponse({"success": False, "error": "Invalid request method"}, status=400)

@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends layout %}
 {% load static %}
 
 {% block content %}
@@ -26,13 +26,39 @@
                     {{ form.longitude }}
                 
                     <label for="id_grower">Grower:</label>
-                    {{ form.grower }}
+                    <select id="id_grower" name="grower" class="form-control">
+                        {% for grower in grower_list %}
+                            <option value="{{ grower.id }}" {% if form.grower.value == grower.id %}selected{% endif %}>
+                                {{ grower.first_name }} {{ grower.last_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-success my-2" data-bs-toggle="modal" data-bs-target="#growerModal">Add Grower</button>
                     <br>
                     
                     <!-- The Leaflet map -->
                     <div id="map" style="height: 400px;"></div>
                     <br>
                     <button class="btn btn-primary" type="submit">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grower Modal -->
+<div class="modal fade" id="growerModal" tabindex="-1" aria-labelledby="growerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="growerModalLabel">Add Grower</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="growerForm">
+                    {% csrf_token %}
+                    {{ farmform.as_p }}
+                    <button type="submit" class="btn btn-primary">Save Grower</button>
                 </form>
             </div>
         </div>
@@ -68,6 +94,40 @@
         // Update form fields with selected latitude and longitude values
         document.getElementById('id_latitude').value = lat;
         document.getElementById('id_longitude').value = lng;
+    });
+
+    // Handle Grower Form Submission with AJAX
+    document.getElementById("growerForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        let formData = new FormData(this);
+
+        fetch("{% url 'save_farm_grower' %}", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(response => response.json())  // Parse JSON response
+        .then(data => {
+            if (data.success) {
+                alert("Grower added successfully!");
+
+                // Update Grower Dropdown
+                let growerDropdown = document.getElementById("id_grower");
+                let newOption = new Option(data.grower.name, data.grower.id, true, true);
+                growerDropdown.add(newOption);
+
+                // Reset Form & Close Modal
+                document.getElementById("growerForm").reset();
+                var modal = bootstrap.Modal.getInstance(document.getElementById("growerModal"));
+                modal.hide();
+            } else {
+                alert("Error adding grower.");
+            }
+        })
+        .catch(error => console.error("Error:", error));
     });
 </script>
 

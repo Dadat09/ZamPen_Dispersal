@@ -1,61 +1,59 @@
-{% extends 'base.html' %}
-
+{% extends layout %}
 {% block content %}
-<div class="container" style="padding-bottom: 10vh;">
-    <div class="row justify-content-center mt-5">
-        <div class="col-lg-6">
-            <div class="card shadow-lg p-5 custom-form">
-                <h2 class="mb-4 text-center">Edit Dispersal</h2>
+<div class="container mt-5">
+    <div class="card shadow-lg p-5 custom-form">
+        <h1>{{ title }}</h1>
+        <form method="POST">
+            {% csrf_token %}
 
-                <form method="post" enctype="multipart/form-data">
+            <!-- Grower Field -->
+            <label for="id_grower">Grower:</label>
+            <select id="id_grower" name="grower" class="form-control">
+                {% for grower in grower_list %}
+                    <option value="{{ grower.id }}" {% if form.grower.value == grower.id %}selected{% endif %}>
+                        {{ grower.first_name }} {{ grower.last_name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <!-- Farm Location Field -->
+            <label for="id_farmlocation">Farm Location:</label>
+            <select id="id_farmlocation" name="farmlocation" class="form-control">
+                {% for farm in farm_list %}
+                    <option value="{{ farm.id }}" {% if form.farmlocation.value == farm.id %}selected{% endif %}>
+                        {{ farm.name }}
+                    </option>
+                {% endfor %}
+            </select>
+            <button type="button" class="btn btn-success my-2" data-bs-toggle="modal" data-bs-target="#farmModal">
+                Add Farm Location
+            </button>
+
+            <!-- Other Form Fields -->
+            <label for="id_dispersal_date">Dispersal Date:</label>
+            {{ form.dispersal_date }}
+
+            <label for="id_families_dispersed">Families Dispersed:</label>
+            {{ form.families_dispersed }}
+
+            <button class="btn btn-primary mt-3" type="submit">Update Dispersal</button>
+        </form>
+    </div>
+</div>
+
+<!-- Farm Location Modal -->
+<div class="modal fade" id="farmModal" tabindex="-1" aria-labelledby="farmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="farmModalLabel">Add Farm Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="farmForm">
                     {% csrf_token %}
-                    
-                    <!-- Grower and Dispersal Date -->
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="id_grower" class="form-label">Grower</label>
-                                {{ form.grower }}
-                                {{ form.grower.errors }}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="id_dispersal_date" class="form-label">Dispersal Date</label>
-                                {{ form.dispersal_date }}
-                                {{ form.dispersal_date.errors }}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Families Dispersed with search and scrollable list -->
-                    <div class="mb-3">
-                        <label for="id_families_dispersed" class="form-label">Families Dispersed</label>
-                        
-                        <!-- Search input for filtering checkboxes -->
-                        <input type="text" id="familySearch" onkeyup="filterFamilies()" placeholder="Search for families..." class="form-control mb-2">
-                        
-                        <!-- Scrollable list of checkboxes -->
-                        <div id="familiesList" style="max-height: 400px; overflow-y: auto; background-color:#ededed; border: solid 1px; border-color:black; padding-left: 5px;">
-                            <div class="families-container">
-                                {% for family in form.families_dispersed %}
-                                    <div>
-                                        <input type="checkbox" name="families_dispersed" value="{{ family.choice_value }}" id="{{ family.choice_id }}" {% if family.is_checked %} checked {% endif %}>
-                                        <label for="{{ family.choice_id }}">{{ family.choice_label }}</label>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Farm Location filtered by selected Grower -->
-                    <div class="mb-3">
-                        <label for="id_farmlocation" class="form-label">Farm Location</label>
-                        {{ form.farmlocation }}
-                        {{ form.farmlocation.errors }}
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100">Update</button>
+                    {{ farmform.as_p }}
+                    <button type="submit" class="btn btn-primary">Save Farm</button>
                 </form>
             </div>
         </div>
@@ -63,52 +61,38 @@
 </div>
 
 <script>
-    // JavaScript function to filter checkboxes in the scrollable list
-    function filterFamilies() {
-        var input, filter, div, labels, i, txtValue;
-        input = document.getElementById('familySearch');
-        filter = input.value.toUpperCase();
-        div = document.getElementById("familiesList");
-        labels = div.getElementsByTagName('label');
-        
-        for (i = 0; i < labels.length; i++) {
-            txtValue = labels[i].textContent || labels[i].innerText;
-            if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                labels[i].style.display = "";
-            } else {
-                labels[i].style.display = "none";
+    // Handle Farm Form Submission with AJAX
+    document.getElementById("farmForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        let formData = new FormData(this);
+
+        fetch("{% url 'save_farm_location' %}", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
             }
-        }
-    }
+        })
+        .then(response => response.json())  
+        .then(data => {
+            if (data.success) {
+                alert("Farm location added successfully!");
 
-    // Function to filter farms based on the selected grower
-    document.getElementById('id_grower').addEventListener('change', function() {
-        var growerId = this.value;
-        var farmLocationField = document.getElementById('id_farmlocation');
-        
-        // Clear current options
-        farmLocationField.innerHTML = '';
-        
-        // Fetch the farms for the selected grower
-        fetch('/path/to/fetch/farms/?grower_id=' + growerId)
-            .then(response => response.json())
-            .then(data => {
-                data.farms.forEach(function(farm) {
-                    var option = document.createElement('option');
-                    option.value = farm.id;
-                    option.textContent = farm.name;
-                    farmLocationField.appendChild(option);
-                });
-            });
-    });
+                // Update Farm Location Dropdown
+                let farmDropdown = document.getElementById("id_farmlocation");
+                let newOption = new Option(data.farm.name, data.farm.id, true, true);
+                farmDropdown.add(newOption);
 
-    // Automatically trigger filtering of farms on page load if a grower is already selected
-    document.addEventListener('DOMContentLoaded', function() {
-        var growerField = document.getElementById('id_grower');
-        if (growerField.value) {
-            var event = new Event('change');
-            growerField.dispatchEvent(event);
-        }
+                // Reset Form & Close Modal
+                document.getElementById("farmForm").reset();
+                var modal = bootstrap.Modal.getInstance(document.getElementById("farmModal"));
+                modal.hide();
+            } else {
+                alert("Error adding farm.");
+            }
+        })
+        .catch(error => console.error("Error:", error));
     });
 </script>
 

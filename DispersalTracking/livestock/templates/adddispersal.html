@@ -1,133 +1,114 @@
-{% extends 'base.html' %}
-
+{% extends layout %}
 {% block content %}
-<div class="container" style="padding-bottom: 10vh;">
-    <div class="row justify-content-center mt-5">
-        <div class="col-lg-6">
-            <div class="card shadow-lg p-5 custom-form">
-                <h2 class="mb-4 text-center">Add Dispersal</h2>
+<div class="container mt-5">
+    <div class="card shadow-lg p-5 custom-form">
+        <h1>{{ title }}</h1>
+        <form method="POST">
+            {% csrf_token %}
+            <!-- Render Farm Location Field -->
+            <label for="id_farmlocation">Farm Location:</label>
+            <select id="id_farmlocation" name="farmlocation" class="form-control">
+                {% for farm in farm_list %}
+                    <option value="{{ farm.id }}">{{ farm.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="button" class="btn btn-success my-2" data-bs-toggle="modal" data-bs-target="#farmModal">
+                Add Farm Location
+            </button>
+            <br>
+            <!-- Explicitly Render Other Form Fields -->
+            <label for="id_dispersal_date">Dispersal Date:</label>
+            {{ form.dispersal_date }}
 
-                <form method="post" enctype="multipart/form-data">
+            <label for="id_families_dispersed">Families Dispersed:</label>
+            {{ form.families_dispersed }}
+
+            <button class="btn btn-primary mt-3" type="submit">Save Dispersal</button>
+        </form>
+    </div>
+</div>
+
+<!-- Farm Location Modal with Map -->
+<div class="modal fade" id="farmModal" tabindex="-1" aria-labelledby="farmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="farmModalLabel">Add Farm Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="farmForm">
                     {% csrf_token %}
+                    {{ farmform.as_p }}
+
+                    <!-- Map Section -->
+                    <label>Pick Farm Location:</label>
+                    <div id="map" style="height: 400px;"></div>
                     
-                    <!-- Grower and Dispersal Date -->
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="id_grower" class="form-label">Grower</label>
-                                {{ form.grower }}
-                                {{ form.grower.errors }}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="id_dispersal_date" class="form-label">Dispersal Date</label>
-                                {{ form.dispersal_date }}
-                                {{ form.dispersal_date.errors }}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Families Dispersed with search and scrollable list -->
-                    <div class="mb-3">
-                        <label for="id_families_dispersed" class="form-label">Families Dispersed</label>
-                        
-                        <!-- Search input for filtering checkboxes -->
-                        <input type="text" id="familySearch" onkeyup="filterFamilies()" placeholder="Search for families..." class="form-control mb-2">
-                        
-                        <!-- Scrollable list of checkboxes -->
-                        <div id="familiesList" style="max-height: 400px; overflow-y: auto; background-color:#ededed; border: solid 1px; border-color:black; padding-left: 5px;">
-                            <div class="families-container">
-                                {{ form.families_dispersed }}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Farm Location filtered by selected Grower -->
-                    <div class="mb-3">
-                        <label for="id_farmlocation" class="form-label">Farm Location</label>
-                        {{ form.farmlocation }}
-                        {{ form.farmlocation.errors }}
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100">Submit</button>
+                    <button type="submit" class="btn btn-primary mt-3">Save Farm</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<style>
-    /* Full width for the list container */
-    #familiesList {
-        width: 100%;
-    }
-
-    /* Ensure each checkbox and label is laid out horizontally */
-    .families-container div {
-        display: block;
-        width: 100%;
-        padding: 5px 0;
-    }
-
-    /* Keep the checkbox and label aligned */
-    .families-container label {
-        display: flex;
-        align-items: center;
-        width: 100%;
-    }
-
-    /* Ensure the checkbox is aligned next to the label text */
-    .families-container input[type="checkbox"] {
-        margin-right: 10px;
-    }
-
-    /* Ensure labels don't break into multiple lines */
-    .families-container label {
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-    }
-</style>
+<!-- Include Leaflet.js for Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
 <script>
-    // JavaScript function to filter checkboxes in the scrollable list
-    function filterFamilies() {
-        var input, filter, div, labels, i, txtValue;
-        input = document.getElementById('familySearch');
-        filter = input.value.toUpperCase();
-        div = document.getElementById("familiesList");
-        labels = div.getElementsByTagName('label');
-        
-        for (i = 0; i < labels.length; i++) {
-            txtValue = labels[i].textContent || labels[i].innerText;
-            if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                labels[i].style.display = "";
-            } else {
-                labels[i].style.display = "none";
-            }
-        }
-    }
+    var map = L.map('map').setView([6.9103, 122.0739], 13);  // Default center
 
-    // Function to filter farms based on the selected grower
-    document.getElementById('id_grower').addEventListener('change', function() {
-        var growerId = this.value;
-        var farmLocationField = document.getElementById('id_farmlocation');
-        
-        // Clear current options
-        farmLocationField.innerHTML = '';
-        
-        // Fetch the farms for the selected grower
-        fetch('/path/to/fetch/farms/?grower_id=' + growerId)
-            .then(response => response.json())
-            .then(data => {
-                data.farms.forEach(function(farm) {
-                    var option = document.createElement('option');
-                    option.value = farm.id;
-                    option.textContent = farm.name;
-                    farmLocationField.appendChild(option);
-                });
-            });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    var marker = L.marker([6.9103, 122.0739], {draggable: true}).addTo(map);  // Draggable marker
+
+    map.on('click', function (e) {
+        var lat = e.latlng.lat.toFixed(6);
+        var lng = e.latlng.lng.toFixed(6);
+
+        // Update marker position
+        marker.setLatLng([lat, lng]);
+
+        // Set the latitude & longitude values in the form
+        document.getElementById('id_latitude').value = lat;
+        document.getElementById('id_longitude').value = lng;
+    });
+
+    // AJAX Submission for Farm Location
+    document.getElementById("farmForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        let formData = new FormData(this);
+
+        fetch("{% url 'save_farm_location' %}", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(response => response.json())  
+        .then(data => {
+            if (data.success) {
+                alert("Farm location added successfully!");
+
+                // Update Farm Location Dropdown
+                let farmDropdown = document.getElementById("id_farmlocation");
+                let newOption = new Option(data.farm.name, data.farm.id, true, true);
+                farmDropdown.add(newOption);
+
+                // Reset Form & Close Modal
+                document.getElementById("farmForm").reset();
+                var modal = bootstrap.Modal.getInstance(document.getElementById("farmModal"));
+                modal.hide();
+            } else {
+                alert("Error adding farm.");
+            }
+        })
+        .catch(error => console.error("Error:", error));
     });
 </script>
 

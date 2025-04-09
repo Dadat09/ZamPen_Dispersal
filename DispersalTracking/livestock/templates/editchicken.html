@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends layout %}
 
 {% block content %}
 <div class="container" style="padding-bottom: 10vh;">
@@ -8,9 +8,9 @@
                 <h2 class="mb-4 text-center">Edit Livestock</h2>
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
-                    <!-- Render other fields -->
+
                     {% for field in form %}
-                        {% if field.name != 'tag_color' %}
+                        {% if field.name != 'tag_color' and field.name != 'profile_picture' %}
                             <div class="form-group">
                                 {{ field.label_tag }}
                                 {{ field }}
@@ -18,6 +18,21 @@
                             </div>
                         {% endif %}
                     {% endfor %}
+
+                    <!-- Display Existing Profile Picture -->
+                    {% if livestock.profile_picture %}
+                        <div class="form-group text-center">
+                            <label>Current Profile Picture</label>
+                            <br>
+                            <img src="{{ livestock.profile_picture.url }}" alt="Profile Picture" width="100" height="100" class="rounded">
+                        </div>
+                    {% endif %}
+
+                    <!-- Allow Uploading a New Profile Picture -->
+                    <div class="form-group">
+                        <label for="id_profile_picture">Upload New Profile Picture</label>
+                        <input type="file" name="profile_picture" id="id_profile_picture" class="form-control">
+                    </div>
 
                     <!-- Render tag_color as a dropdown and text input -->
                     <div class="form-group">
@@ -31,6 +46,7 @@
                         </select>
                         <input type="text" name="custom_tag_color" placeholder="Type a new tag color" class="form-control mt-2" id="custom_color_input" style="display:none;" />
                     </div>
+
                     <br>
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                 </form>
@@ -47,11 +63,11 @@
             customInput.value = ''; // Clear input
         } else {
             customInput.style.display = 'none';
-            customInput.value = select.value; // Set the input to selected value
+            customInput.value = select.value; // Set input to selected value
         }
     }
 
-    // Ensure that the input is shown if 'other' was already selected
+    // Ensure input is shown if 'other' was selected previously
     document.addEventListener('DOMContentLoaded', function () {
         const tagColorSelect = document.getElementById('tag_color');
         if (tagColorSelect.value === 'other') {

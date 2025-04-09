@@ -43,7 +43,7 @@
             <tbody>
                 {% for dispersal in page_obj %}
                 <tr>
-                    <td>{{ dispersal.grower}}</td>
+                    <td>{{ dispersal.farmlocation.grower.first_name}} {{ dispersal.farmlocation.grower.last_name}}</td>
                     <td>{{ dispersal.dispersal_date }}</td>
                     <td>{{ dispersal.farmlocation.name }}</td>
                     <td>

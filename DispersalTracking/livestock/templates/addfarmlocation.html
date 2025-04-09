@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends layout %}
 {% load static %}
 
 {% block content %}
@@ -26,15 +26,37 @@
                     {{ form.longitude }}
                 
                     <label for="id_grower">Grower:</label>
-                    {{ form.grower }}
-                    <br>
+<select id="id_grower" name="grower" class="form-control">
+    {% for grower in grower_list %}
+        <option value="{{ grower.id }}">{{ grower.first_name }} {{ grower.last_name }}</option>
+    {% endfor %}
+</select>
+<button type="button" class="btn btn-success my-2" data-bs-toggle="modal" data-bs-target="#growerModal"> Add Grower </button>
+                    <br> 
                     <!-- The Leaflet map -->
                     <div id="map" style="height: 400px;"></div>
                     <br>
                     <button class="btn btn-primary" type="submit">Submit</button>
                 </form>
-                
             </div>
+            <!-- Grower Modal -->
+<div class="modal fade" id="growerModal" tabindex="-1" aria-labelledby="growerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="growerModalLabel">Add Grower</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="growerForm">
+                    {% csrf_token %}
+                    {{ farmform.as_p }}
+                    <button type="submit" class="btn btn-primary">Save Grower</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
         </div>
     </div>
 </div>
@@ -44,13 +66,13 @@
 <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
 <script>
-    var map = L.map('map').setView([10.3157, 123.8854], 13);  // Center map on your desired location
+    var map = L.map('map').setView([6.9103, 122.0739], 13);  // Center map on your desired location
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    var marker = L.marker([10.3157, 123.8854]).addTo(map);  // Add a marker to the map
+    var marker = L.marker([6.9103, 122.0739]).addTo(map);  // Add a marker to the map
 
     map.on('click', function (e) {
         var lat = e.latlng.lat.toFixed(6);
@@ -66,6 +88,47 @@
         // Update form fields with selected latitude and longitude values
         document.getElementsByName('latitude')[0].value = lat;
         document.getElementsByName('longitude')[0].value = lng;
+    });
+    document.getElementById("growerForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+    
+        let formData = new FormData(this);
+    
+        fetch("{% url 'save_farm_grower' %}", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"  // Tell Django it's an AJAX request
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => { throw new Error(text) }); // Handle non-JSON responses
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert("Grower added successfully!");
+    
+                // Update Grower Dropdown
+                let growerDropdown = document.getElementById("id_grower");
+                let newOption = new Option(data.grower.name, data.grower.id, true, true);
+                growerDropdown.add(newOption);
+    
+                // Reset Form & Close Modal
+                document.getElementById("growerForm").reset();
+                var modal = bootstrap.Modal.getInstance(document.getElementById("growerModal"));
+                modal.hide();
+            } else {
+                alert("Error adding grower.");
+                console.error("Form Errors:", data.errors);
+            }
+        })
+        .catch(error => {
+            console.error("Request Failed:", error);
+            alert("An unexpected error occurred.");
+        });
     });
 </script>
 

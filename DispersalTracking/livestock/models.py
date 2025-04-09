@@ -20,15 +20,33 @@ class LivestockFamilyManager(models.Manager):
         return self.filter(gender='Female', family_female__isnull=True)
     
 class LivestockFamily(models.Model):
-    family_id = models.CharField(primary_key=True, max_length=155, null=False)
+    family_id = models.CharField(primary_key=True, max_length=155, unique=True)
     cage_location = models.CharField(max_length=100)
     date_recorded = models.DateField(default=timezone.now)
     brood_generation_number = models.IntegerField(null=True, blank=True, default=1)
-    objects = LivestockFamilyManager()
+    max_roosters = models.IntegerField(default=1)  # Admin configurable
+    max_hens = models.IntegerField(default=8)      # Admin configurable
 
+    def clean(self):    
+        roosters = Livestock.objects.filter(livestock_family=self, gender='Male').count()
+        hens = Livestock.objects.filter(livestock_family=self, gender='Female').count()
+
+        if roosters >= self.max_roosters:
+            raise ValidationError(f"Only {self.max_roosters} rooster(s) allowed per family.")
+        if hens >= self.max_hens:
+            raise ValidationError(f"Only {self.max_hens} hens allowed per family.")
+
+        tag_colors = Livestock.objects.filter(livestock_family=self).values_list('tag_color', flat=True).distinct()
+        if len(tag_colors) > 1:
+            raise ValidationError("All chickens in a family must have the same tag color.")
+    
     def __str__(self):
-        return f"Family {self.family_id} at {self.cage_location}"
+        return self.family_id  # ✅ Only displays the ID
 
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+    
 class Livestock(models.Model):
     GENDER_CHOICES = [('Male', 'Male'), ('Female', 'Female')]
 
@@ -40,27 +58,21 @@ class Livestock(models.Model):
     tag_color = models.CharField(max_length=50)
     date_recorded = models.DateField(default=timezone.now)
     livestock_family = models.ForeignKey('LivestockFamily', on_delete=models.CASCADE, null=True, blank=True)
-    objects = models.Manager()  # The default manager
-    chicken_family_objects = LivestockFamilyManager()  # The custom manager.
+    profile_picture = models.ImageField(upload_to='livestock_images/', null=True, blank=True)
 
     def __str__(self):
         return self.ls_code
 
     def update_age(self):
-        if self.date_recorded:
-            current_age = (timezone.now().date() - self.date_recorded).days
-            self.age_in_days = current_age
+        if self.date_recorded and self.age_in_days is not None:
+            self.age_in_days += (timezone.now().date() - self.date_recorded).days
             self.save()
 
     
 class Dispersal(models.Model):
-    grower = models.ForeignKey(Grower, on_delete=models.CASCADE)
     dispersal_date = models.DateField()
     families_dispersed = models.ManyToManyField(LivestockFamily)
     farmlocation = models.ForeignKey(FarmLocation, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"Dispersed to {self.grower} on {self.dispersal_date}"
 
     def clean(self):
         if self.dispersal_date > timezone.now().date():
@@ -76,3 +88,17 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Message from {self.name} ({self.email})"
+    
+class SystemSettings(models.Model):
+    max_roosters = models.IntegerField(default=1, help_text="Max roosters per family")
+    max_hens = models.IntegerField(default=8, help_text="Max hens per family")
+
+    def save(self, *args, **kwargs):
+        # Ensure only one settings instance exists
+        if SystemSettings.objects.exists() and not self.pk:
+            raise ValidationError("There can only be one SystemSettings instance.")
+        super(SystemSettings, self).save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        return cls.objects.first() or cls.objects.create()

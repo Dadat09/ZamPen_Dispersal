@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends layout %}
 
 {% block content %}
 <div class="container" style="padding-bottom: 10vh;">
@@ -20,22 +20,47 @@
                         {% endif %}
                     {% endfor %}
                     
+                 <!-- Checkbox to enable family creation -->
+                    <div class="form-group">
+                        <input type="checkbox" id="create_family" name="create_family" onchange="toggleFamilyFields()">
+                        <label for="create_family">Create New Family</label>
+                    </div>
+
+                    <!-- New Family Fields (Hidden by Default) -->
+                    <div id="new_family_fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="family_id">Family ID</label>
+                            <input type="text" id="family_id" name="family_id" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="cage_location">Cage Location</label>
+                            <input type="text" id="cage_location" name="cage_location" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="brood_generation_number">Brood Generation Number</label>
+                            <input type="number" id="brood_generation_number" name="brood_generation_number" class="form-control" value="1" min="1">
+                        </div>
+                    </div>
+
                     <!-- Render tag_color as a dropdown and text input for custom color -->
                     <div class="form-group">
                         <label for="tag_color">Tag Color</label>
-                        <select id="tag_color" class="form-control" name="tag_color" onchange="toggleInput(this)">
+                        <select id="tag_color" class="form-control" name="tag_color" onchange="toggleCustomTagColor(this)">
                             <option value="">Choose a tag color</option>
-                            {% for color in form.fields.tag_color.choices %}
-                                <!-- Avoid adding "Other" again if it's already added in the form -->
-                                {% if color.0 != "other" %}
-                                    <option value="{{ color.0 }}">{{ color.1 }}</option>
+                            {% for color in tag_colors %}
+                                {% if color %}
+                                    <option value="{{ color }}">{{ color }}</option>
                                 {% endif %}
                             {% endfor %}
-                            <option value="other">Other</option> <!-- Manually add Other option only once -->
+                            <option value="other">Other</option> <!-- Add "Other" option -->
                         </select>
-                        <!-- Custom tag color input field, hidden by default -->
-                        {{ form.custom_tag_color }}
                     </div>
+                    
+                    <!-- Custom tag color input field, hidden by default -->
+                    <div id="custom_tag_color_container" style="display: none;">
+                        <label for="custom_tag_color">Enter Custom Tag Color</label>
+                        <input type="text" id="custom_tag_color" name="custom_tag_color" class="form-control">
+                    </div>                    
 
                     <br>
                     <button type="submit" class="btn btn-primary">Submit</button>
@@ -46,15 +71,24 @@
 </div>
 
 <script>
-    function toggleInput(select) {
-        const customInput = document.getElementById('id_custom_tag_color');  // Use Django-generated ID
+    function toggleCustomTagColor(select) {
+        let customInputContainer = document.getElementById('custom_tag_color_container');
+        let customInput = document.getElementById('custom_tag_color');  // Now it matches the manually set ID
+
         if (select.value === 'other') {
-            customInput.style.display = 'block';  // Show the custom input
+            customInputContainer.style.display = 'block';
             customInput.value = '';  // Clear any previous value
         } else {
-            customInput.style.display = 'none';  // Hide the custom input
-            customInput.value = '';  // Clear the custom input field
+            customInputContainer.style.display = 'none';
+            customInput.value = '';  // Clear input
         }
     }
+
+    function toggleFamilyFields() {
+        let familyFields = document.getElementById('new_family_fields');
+        let checkbox = document.getElementById('create_family');
+        familyFields.style.display = checkbox.checked ? 'block' : 'none';
+    }
+
 </script>
 {% endblock %}

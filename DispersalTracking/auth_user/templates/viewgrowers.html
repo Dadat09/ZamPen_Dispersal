@@ -38,11 +38,7 @@
                     <th>First Name</th>
                     <th>Last Name</th>
                     <th>
-                        <a href="?{% if sort_by == 'Name' and direction == 'asc' %}sort_by=Name&direction=desc{% elif sort_by == 'Name' and direction == 'desc' %}sort_by=Name&direction=reset{% else %}sort_by=Name&direction=asc{% endif %}">
                             Username
-                            {% if sort_by == 'Name' %}
-                                {% if direction == 'asc' %}▲{% elif direction == 'desc' %}▼{% endif %}
-                            {% endif %}
                         </a>
                     </th>
                     <th>Contact No</th>
@@ -58,9 +54,9 @@
                 {% for grower in page_obj %}
                 <tr>
                     <td>{{ grower.id }}</td>
-                    <td>{{ grower.Name.first_name }}</td>
-                    <td>{{ grower.Name.last_name }}</td>
-                    <td>{{ grower.Name.username }}</td>
+                    <td>{{ grower.first_name }}</td>
+                    <td>{{ grower.last_name }}</td>
+                    <td>{{ grower.linked_user.username }}</td>
                     <td>{{ grower.ContactNo }}</td>
                     <td>{{ grower.Email }}</td>
                     <td>{{ grower.barangay }}</td>

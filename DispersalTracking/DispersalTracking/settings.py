@@ -64,6 +64,7 @@ TEMPLATES = [
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
+                'django.template.context_processors.media',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
@@ -80,14 +81,13 @@ WSGI_APPLICATION = 'DispersalTracking.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'Livestock',
-        'USER' : 'root',
-        'PASSWORD' : 'w32m@ARRd3c_pR0j3cT',
-        'HOST' : '127.0.0.1',
-        'PORT' : 3306,
+        'NAME': 'livestock',
+        'USER': 'root',
+        'PASSWORD': '',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -113,11 +113,20 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Manila'
 
 USE_I18N = True
 
 USE_TZ = True
+
+# Set session timeout (in seconds)
+SESSION_COOKIE_AGE = 1800  # 30 minutes (adjust as needed)
+
+# Set session to expire when the user closes the browser
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Optional: Use session engine (default is database-backed sessions)
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
 
 # Static files (CSS, JavaScript, Images)
@@ -137,3 +146,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = 'login'
 LOGOUT_REDIRECT_URL = 'index'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

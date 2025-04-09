@@ -16,6 +16,9 @@
                     <div class="col-12 col-md-auto">
                         <a href="{% url 'addfamily' %}" class="btn btn-success w-100">Add New Family</a>
                     </div>
+                    <div class="col-12 col-md-auto">
+                        <a href="{% url 'download_family_pdf' %}" class="btn btn-success w-100">Download PDF</a>
+                    </div>
                     {% endif %}
                 </div>
             </form>
@@ -46,9 +49,10 @@
                         <td>{{family.date_recorded}}</td>
                         <td style="text-align: end;">
                             <a href="{% url 'editfamily' family.family_id %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-pen-to-square"></i></a>
-                            <button type="button" class="btn btn-danger btn-sm" onclick="openDeleteModal({{ family.family_id }})">
+                            <button class="btn btn-danger btn-sm" onclick="openDeleteModal(this)" data-url="{% url 'deletefamily' family.family_id %}" >
                                 <i class="fa-solid fa-trash"></i>
                             </button>
+                            <a href="{% url 'family_detail' family.family_id %}" class="btn btn-dark btn-sm"><i class="fa-solid fa-address-card"></i></a>
                         </td>
                     </tr>
                     {%endfor%}
@@ -106,17 +110,16 @@
     </div>
 </div>
 <script>
-    function openDeleteModal(family_id) {
-        const deleteUrl = "{% url 'deletefamily' pk=0 %}".replace("0", family_id);
-        deleteForm.action = deleteUrl;
-        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-        deleteModal.show(); // This should work, but if not, try:
-        var myModal = document.getElementById('deleteModal');
-        var modal = bootstrap.Modal.getInstance(myModal);
-        if (!modal) {
-            modal = new bootstrap.Modal(myModal);
-        }
-        modal.show();
+    function openDeleteModal(button) {
+        // Get the delete URL from the button
+        const deleteUrl = button.getAttribute("data-url");
+    
+        // Set the form action to the correct URL
+        document.getElementById("deleteForm").action = deleteUrl;
+    
+        // Show the modal
+        let deleteModal = new bootstrap.Modal(document.getElementById("deleteModal"));
+        deleteModal.show();
     }
 </script>
 <style>
